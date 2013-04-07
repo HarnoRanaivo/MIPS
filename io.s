@@ -10,7 +10,8 @@ main:
 jal dem
 jal recup
 jal chercheBSlashN
-jal gereImage
+jal affiche
+#jal gereImage
 
 dem:
 la $a0 demande
@@ -30,7 +31,7 @@ jr $ra
 
 chercheBSlashN:
 #Prologue
-subu $sp $sp 12
+subiu $sp $sp 12
 sb $a1 8($sp)
 sb $a0 4($sp)
 sw $ra 0($sp)
@@ -38,15 +39,28 @@ sw $ra 0($sp)
 li $t0 1
 li $t1 10 # valeur de \n
 li $t3 0
+li $t4 0 # valeur de \0
 mul $a1 $a1 $t0
 LoopCherche:
-beq $t0 $a1 FinLoopCherche
-add $t2 $a0 $t0
-lw $t3 0($t2)
-beq $t3 $t1 FinLoopCherche
+beq $t0 $a1 FinLoopCherche # vérifie si l'on a regardé tous les caractères possibles
+add $t2 $a0 $t0 # adresse regardée = adresse de base + $t0 décalage
+lb $t3 0($t2) # chargement de la valeur à l'adresse $t2 dans $t3
+beq $t3 $t1 FinLoopCherche # teste si $t3 = 10
+addiu $t0 $t0 1 # incrément $t0
 j LoopCherche
 FinLoopCherche:
-move 
+#Epilogue
+sw $t4 0($t2) # met un 0 à la place du 10 à l'adresse $t2
+lb $a1 8($sp)
+lb $a0 4($sp)
+lw $ra 0($sp)
+addi $sp $sp 16
+jr $ra
+
+affiche:
+li $v0 4
+syscall
+j Exit
 
 gereImage:
 #ouverture
