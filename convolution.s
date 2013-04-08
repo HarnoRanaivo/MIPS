@@ -1,41 +1,121 @@
 .data
-    seuil:  .word   10
-    Ft:     .word   3
-    Fx:     .word   1, 0, -1, 2, 0, -2, 1, 0, -1
-    Fy:     .word   1, 2, 1, 0, 0, 0, -1, -2, -1
+    SEUIL:  .word   10
+    FTAILLE:     .word   3
+    FX:     .word   1, 0, -1, 2, 0, -2, 1, 0, -1
+    FY:     .word   1, 2, 1, 0, 0, 0, -1, -2, -1
 
 .text
 
-# Seuillage
-Seuillage1:
+Exit:
+    li $v0 10
+    syscall
+
+###############################################################################
+# Valeur Absolue {{{
+# Paramètres :
+# a0 : Entier dont on veut la valeur absolue
+#
+# Retour:
+# v0 : Valeur absolue de a0
+ValeurAbsolue:
     # Prologue
     subiu $sp $sp 8
     sw $ra 0($sp)
     sw $a0 4($sp)
 
     # Corps
-    move $t0 $a0
-    li $t1 255
-    bge $t0 $t1 SupSeuil1
-        move $v0 $t0
-        j EpilogueSeuillage1
-    SupSeuil1
-        move $v0 $t1:
-        j EpilogueSeuillage1
+    bltz $a0 NegValeur
+        move $v0 $a0
+        j ValeurAbsolueEpilogue
+    NegValeur:
+        negu $v0 $a0
+        j ValeurAbsolueEpilogue
 
-    EpilogueSeuillage1:
-
+    ValeurAbsolueEpilogue:
     # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
     addiu $sp $sp 8
     jr $ra
-# Fin Seuillage
+# Fin Valeur Absolue
+# }}}
+###############################################################################
 
-# Convolution
+###############################################################################
+# Seuillage255 {{{
+# Paramètres :
+# a0 : Entier à seuiller
+#
+# Retour :
+# v0 : a0 seuillé
+Seuillage255:
+    # Prologue
+    subiu $sp $sp 8
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+
+    # Corps
+    li $t0 255
+    bge $a0 $t0 SupSeuil255
+        move $v0 $a0
+        j Seuillage255Epilogue
+    SupSeuil255:
+        move $v0 $t0
+        j Seuillage255Epilogue
+
+    Seuillage255Epilogue:
+    # Epilogue
+    lw $ra 0($sp)
+    lw $a0 4($sp)
+    addiu $sp $sp 8
+    jr $ra
+# Fin Seuillage255
+# }}}
+###############################################################################
+
+###############################################################################
+# SeuillageInf {{{
+# Paramètres :
+# a0 : Entier à seuiller
+# a1 : Seuil inférieur
+#
+# Retour :
+# v0 : a0 seuillé
+SeuillageInf:
+    # Prologue
+    subiu $sp $sp 12
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+    sw $a1 4($sp)
+
+    # Corps
+    ble $a0 $a1 InfSeuil
+        move $v0 $a0
+        j SeuillageInfEpilogue
+    InfSeuil:
+        move $v0 $0
+        j SeuillageInfEpilogue
+
+    SeuillageInfEpilogue:
+    # Epilogue
+    lw $ra 0($sp)
+    lw $a0 4($sp)
+    lw $a1 8($sp)
+    addiu $sp $sp 12
+    jr $ra
+# Fin SeuillageInf
+# }}}
+###############################################################################
+
+###############################################################################
+# Convolution {{{
+# Paramètres :
 # a0 : taille des matrices
 # a1 : matrice A
 # a2 : matrice Fx ou Fy
+#
+# Retour :
+# v0 : convolution de a1 par a2
 Convolution:
     # Prologue
     subiu $sp $sp 16
@@ -49,7 +129,8 @@ Convolution:
     move $t0 $0         # Compteur
     move $t1 $a1        # Adresse de A
     move $t2 $a2        # Adresse de F
-    muli $t3 $t0 4      # Compteur en octets
+    li $t7 4
+    mul $t3 $t0 $t7     # Compteur en octets
     move $t4 $0         # V
     move $t5 $0
     move $t6 $0
@@ -59,11 +140,11 @@ Convolution:
         addu $t1 $a1 $t3    # Adresse de A[$t0]
         addu $t2 $a2 $t3    # Adresse de F[$t0]
         lw $t5 0($t1)       # Chargement de A[$t0]
-        lw $t6 O($t2)       # Chargement de F[$t0]
+        lw $t6 0($t2)       # Chargement de F[$t0]
         mul $t5 $t5 $t6     # A[$t0] * F[$t0]
-        add $t4 $t5         # $t4 += A[$t0] * F[$t0]
+        add $t4 $t4 $t5     # $t4 += A[$t0] * F[$t0]
         addi $t0 $t0 1      # Incrémentation du compteur
-        muli $t3 $t0 4      #
+        mul $t3 $t0 $t7     #
         j LoopConvolution
     EndLoopConvolution:
 
@@ -77,3 +158,78 @@ Convolution:
     addiu $sp $sp 16
     jr $ra
 #Fin Convolution
+#}}}
+###############################################################################
+
+###############################################################################
+# CalculGz {{{
+# Calcul de la convolution de a0 par a1, et seuillage.
+# Paramètres :
+# a0 : Adresse du pixel et de ses pixels environnants
+# a1 : Adresse de Fx ou Fy
+#
+# Retour :
+# v0 : Fx(a0) ou Fy(a0)
+CalculGz:
+    # Prologue
+    subiu $sp $sp 12
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+    sw $a1 8($sp)
+
+    # Corps
+    move $a2 $a1
+    move $a1 $a0
+    la $a0 FTAILLE
+    jal Convolution         # Convolution de a0 par Fx ou Fy
+
+    move $a0 $v0
+    jal Seuillage255        # Seuillage de Fx(a0) (resp. Fy(a0))
+
+    move $a0 $v0
+    la $a1 SEUIL
+    jal SeuillageInf        # Seuillage inf de Fx(a0) (resp. Fy(a0))
+
+    # Prologue
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+    sw $a1 8($sp)
+    addiu $sp $sp 12
+    jr $ra
+# }}}
+###############################################################################
+
+###############################################################################
+# CalculG {{{
+# Paramètres :
+# a0 : Adresse du pixel et de ses pixels environnants
+#
+# Retour :
+# v0 : G(a0)
+CalculG:
+    # Prologue
+    subiu $sp $sp 8
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+
+    # Corps
+    la $a1 FX
+    jal CalculGz
+    move $t0 $v0
+
+    la $a1 FY
+    jal CalculGz
+    add $t0 $t0 $v0
+
+    move $a0 $t0
+    jal Seuillage255
+
+    # Epilogue
+    lw $ra 0($sp)
+    lw $a0 4($sp)
+    addiu $sp $sp 8
+    jr $ra
+# }}}
+###############################################################################
+
+# vim:ft=asm:fdm=marker:ff=unix:foldopen=all:foldclose=all 
