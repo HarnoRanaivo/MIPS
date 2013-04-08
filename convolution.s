@@ -3,8 +3,15 @@
     FTAILLE:     .word   3
     FX:     .word   1, 0, -1, 2, 0, -2, 1, 0, -1
     FY:     .word   1, 2, 1, 0, 0, 0, -1, -2, -1
+    A:      .word   128, 3, 210, 5, 30, 78, 255, 0, 153
 
 .text
+    la $a0 A
+    jal CalculG
+
+    move $a0 $v0
+    li $v0 1
+    syscall
 
 Exit:
     li $v0 10
@@ -134,9 +141,10 @@ Convolution:
     move $t4 $0         # V
     move $t5 $0
     move $t6 $0
+    mul $a0 $a0 $a0
 
     LoopConvolution:
-    beq $t3 $t0 EndLoopConvolution
+    beq $t0 $a0 EndLoopConvolution
         addu $t1 $a1 $t3    # Adresse de A[$t0]
         addu $t2 $a2 $t3    # Adresse de F[$t0]
         lw $t5 0($t1)       # Chargement de A[$t0]
@@ -180,20 +188,23 @@ CalculGz:
     # Corps
     move $a2 $a1
     move $a1 $a0
-    la $a0 FTAILLE
+    lw $a0 FTAILLE
     jal Convolution         # Convolution de a0 par Fx ou Fy
 
     move $a0 $v0
-    jal Seuillage255        # Seuillage de Fx(a0) (resp. Fy(a0))
+    jal ValeurAbsolue       # Valeur absolue de Gx(a0) (resp. Gy(a0))
 
     move $a0 $v0
-    la $a1 SEUIL
-    jal SeuillageInf        # Seuillage inf de Fx(a0) (resp. Fy(a0))
+    jal Seuillage255        # Seuillage de Gx(a0) (resp. Gy(a0))
+
+    move $a0 $v0
+    lw $a1 SEUIL
+    jal SeuillageInf        # Seuillage inf de Gx(a0) (resp. Gy(a0))
 
     # Prologue
-    sw $ra 0($sp)
-    sw $a0 4($sp)
-    sw $a1 8($sp)
+    lw $ra 0($sp)
+    lw $a0 4($sp)
+    lw $a1 8($sp)
     addiu $sp $sp 12
     jr $ra
 # }}}
@@ -215,13 +226,13 @@ CalculG:
     # Corps
     la $a1 FX
     jal CalculGz
-    move $t0 $v0
+    move $s0 $v0
 
     la $a1 FY
     jal CalculGz
-    add $t0 $t0 $v0
+    add $s0 $s0 $v0
 
-    move $a0 $t0
+    move $a0 $s0
     jal Seuillage255
 
     # Epilogue
