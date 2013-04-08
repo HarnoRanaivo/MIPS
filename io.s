@@ -11,7 +11,7 @@ jal dem
 jal recup
 jal chercheBSlashN
 jal affiche
-#jal gereImage
+jal gereImage
 
 dem:
 la $a0 demande
@@ -32,29 +32,29 @@ jr $ra
 chercheBSlashN:
 #Prologue
 subiu $sp $sp 12
-sb $a1 8($sp)
-sb $a0 4($sp)
+sw $a1 8($sp)
+sw $a0 4($sp)
 sw $ra 0($sp)
 #Corps de la fonction
-li $t0 1
 li $t1 10 # valeur de \n
-li $t3 0
 li $t4 0 # valeur de \0
-mul $a1 $a1 $t0
 LoopCherche:
-beq $t0 $a1 FinLoopCherche # vérifie si l'on a regardé tous les caractères possibles
-add $t2 $a0 $t0 # adresse regardée = adresse de base + $t0 décalage
-lb $t3 0($t2) # chargement de la valeur à l'adresse $t2 dans $t3
-beq $t3 $t1 FinLoopCherche # teste si $t3 = 10
-addiu $t0 $t0 1 # incrément $t0
+lb $t0 0($a0)
+beqz $t0 FinLoopCherche # teste si $t3 = 10
+beq $t0 $t1 SupprimerChariot
+addi $a0 $a0 1 # incrément $t0
 j LoopCherche
+SupprimerChariot:
+sb $t4 0($a0)
+j FinLoopCherche
 FinLoopCherche:
 #Epilogue
-sw $t4 0($t2) # met un 0 à la place du 10 à l'adresse $t2
-lb $a1 8($sp)
-lb $a0 4($sp)
+lw $t0 0($a0)
+move $v0 $t0
+lw $a1 8($sp)
+lw $a0 4($sp)
 lw $ra 0($sp)
-addi $sp $sp 16
+addi $sp $sp 12
 jr $ra
 
 affiche:
@@ -65,7 +65,7 @@ j Exit
 gereImage:
 #ouverture
 li $v0 13
-li $a1 0 #ouvre pour lire
+li $a1 1 #ouvre pour lire
 li $a2 0 #mode est ingoré
 syscall
 bltz $v0 ouv #teste si le fichier est ouvert (existe)
@@ -76,7 +76,7 @@ li $v0 9 # allocation
 syscall
 move $a1 $v0
 move $a0 $s6
-li $v0 14
+li $v0 15
 li $a2 49 # max de caractères à lire
 syscall
 bltz $v0 lect #teste si le fichier est ouvert (existe)
