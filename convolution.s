@@ -1,9 +1,9 @@
 .data
-    SEUIL:  .word   10
-    FTAILLE:     .word   3
-    FX:     .word   1, 0, -1, 2, 0, -2, 1, 0, -1
-    FY:     .word   1, 2, 1, 0, 0, 0, -1, -2, -1
-    A:      .word   128, 3, 210, 5, 30, 78, 255, 0, 153
+    SEUIL:       .word   10                                     # Seuil
+    FTAILLE:     .word   3                                      # Taille des matrices carrées Fx et Fy
+    FX:          .word   1, 0, -1, 2, 0, -2, 1, 0, -1           # Fx utilisée dans la convolution de matrices
+    FY:          .word   1, 2, 1, 0, 0, 0, -1, -2, -1           # Fy utilisée dans la convolution de matrices
+    A:           .word   128, 3, 210, 5, 30, 78, 255, 0, 153
 
 .text
     la $a0 A
@@ -24,22 +24,23 @@ Exit:
 #
 # Retour:
 # v0 : Valeur absolue de a0
+
 ValeurAbsolue:
-    # Prologue
+# Prologue
     subiu $sp $sp 8
     sw $ra 0($sp)
     sw $a0 4($sp)
 
-    # Corps
+# Corps
     bltz $a0 NegValeur
-        move $v0 $a0
+        move $v0 $a0                # a0 >= 0 : v0 = a0
         j ValeurAbsolueEpilogue
     NegValeur:
-        negu $v0 $a0
+        negu $v0 $a0                # a0 < 0 : v0 = -a0
         j ValeurAbsolueEpilogue
 
     ValeurAbsolueEpilogue:
-    # Epilogue
+# Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
     addiu $sp $sp 8
@@ -55,23 +56,24 @@ ValeurAbsolue:
 #
 # Retour :
 # v0 : a0 seuillé
+
 Seuillage255:
-    # Prologue
+# Prologue
     subiu $sp $sp 8
     sw $ra 0($sp)
     sw $a0 4($sp)
 
-    # Corps
+# Corps
     li $t0 255
     bge $a0 $t0 SupSeuil255
-        move $v0 $a0
+        move $v0 $a0                # a0 < 255 : v0 = a0
         j Seuillage255Epilogue
     SupSeuil255:
-        move $v0 $t0
+        move $v0 $t0                # a0 >= 255 : v0 = 255
         j Seuillage255Epilogue
 
     Seuillage255Epilogue:
-    # Epilogue
+# Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
     addiu $sp $sp 8
@@ -97,10 +99,10 @@ SeuillageInf:
 
     # Corps
     ble $a0 $a1 InfSeuil
-        move $v0 $a0
+        move $v0 $a0                # a0 > a1 : v0 = a0
         j SeuillageInfEpilogue
     InfSeuil:
-        move $v0 $0
+        move $v0 $0                 # a0 <= a1 : v0 = 0
         j SeuillageInfEpilogue
 
     SeuillageInfEpilogue:
@@ -123,15 +125,16 @@ SeuillageInf:
 #
 # Retour :
 # v0 : convolution de a1 par a2
+
 Convolution:
-    # Prologue
+# Prologue
     subiu $sp $sp 16
     sw $ra 0($sp)
     sw $a0 4($sp)
     sw $a1 8($sp)
     sw $a2 12($sp)
 
-    # Corps
+# Corps
     # Initialisations
     move $t0 $0         # Compteur
     move $t1 $a1        # Adresse de A
@@ -152,13 +155,13 @@ Convolution:
         mul $t5 $t5 $t6     # A[$t0] * F[$t0]
         add $t4 $t4 $t5     # $t4 += A[$t0] * F[$t0]
         addi $t0 $t0 1      # Incrémentation du compteur
-        mul $t3 $t0 $t7     #
+        mul $t3 $t0 $t7
         j LoopConvolution
     EndLoopConvolution:
 
     move $v0 $t4
 
-    # Epilogue
+# Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
     lw $a1 8($sp)
@@ -170,38 +173,41 @@ Convolution:
 ###############################################################################
 
 ###############################################################################
-# CalculGz {{{
+# CalculGxy {{{
 # Calcul de la convolution de a0 par a1, et seuillage.
 # Paramètres :
 # a0 : Adresse du pixel et de ses pixels environnants
 # a1 : Adresse de Fx ou Fy
 #
 # Retour :
-# v0 : Fx(a0) ou Fy(a0)
-CalculGz:
-    # Prologue
+# v0 : Fx(a0) ou Fy(a0) (valeur absolue seuillée)
+
+CalculGxy:
+# Prologue
     subiu $sp $sp 12
     sw $ra 0($sp)
     sw $a0 4($sp)
     sw $a1 8($sp)
 
-    # Corps
+# Corps
     move $a2 $a1
     move $a1 $a0
     lw $a0 FTAILLE
     jal Convolution         # Convolution de a0 par Fx ou Fy
 
-    move $a0 $v0
+    move $a0 $v0            # v0 : retour de Convolution
     jal ValeurAbsolue       # Valeur absolue de Gx(a0) (resp. Gy(a0))
 
-    move $a0 $v0
+    move $a0 $v0            # v0 : retour de ValeurAbsolue
     jal Seuillage255        # Seuillage de Gx(a0) (resp. Gy(a0))
 
-    move $a0 $v0
+    move $a0 $v0            # v0 : retour de Seuillage255
     lw $a1 SEUIL
     jal SeuillageInf        # Seuillage inf de Gx(a0) (resp. Gy(a0))
 
-    # Prologue
+    # v0 : retour de SeuillageInf(Seuillage255(Convolution(FTAILLE, a0, a1)))
+
+# Prologue
     lw $ra 0($sp)
     lw $a0 4($sp)
     lw $a1 8($sp)
@@ -217,25 +223,29 @@ CalculGz:
 #
 # Retour :
 # v0 : G(a0)
+
 CalculG:
-    # Prologue
+# Prologue
     subiu $sp $sp 8
     sw $ra 0($sp)
     sw $a0 4($sp)
 
-    # Corps
+# Corps
+    # Calcul de Gx
     la $a1 FX
-    jal CalculGz
-    move $s0 $v0
+    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel de CalculG
+    move $s0 $v0        # v0 : retour de CalculGxy(a0, FX)
 
+    # Calcul de Gy
     la $a1 FY
-    jal CalculGz
-    add $s0 $s0 $v0
+    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel de CalculG
 
+    # Gx + Gy et nouveau seuillage
+    add $s0 $s0 $v0     # CalculGxy(a0, FX) + CalculGxy(a0, FY)
     move $a0 $s0
     jal Seuillage255
 
-    # Epilogue
+# Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
     addiu $sp $sp 8
