@@ -691,7 +691,7 @@ CopieVoisinage:
             sb $s4 0($s3)
 
             addi $s2 $s2 1
-            addi $s3 $s3 4      # buffer++
+            addi $s3 $s3 1      # buffer++
             j CopieVoisinageBoucleColonnes
         CopieVoisinageFinBoucleColonnes:
         addi $s1 $s1 1
