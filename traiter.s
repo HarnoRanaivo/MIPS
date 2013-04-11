@@ -523,11 +523,13 @@ TraiterImage:
     lwr $s3 18($a0)      # Largeur en pixels
     lwr $s4 22($a0)      # Hauteur en pixels
 
-    add $s5 $a1 $s2     # Adresse du premier pixel (Dest)
-    add $s6 $a0 $s2     # Adresse du premier pixel (Source)
+    add $s5 $a0 $s2     # Adresse du premier pixel (Source)
+    add $s6 $a1 $s2     # Adresse du premier pixel (Dest)
 
 #
     # Vérification lecture correcte de la taille
+    move $a0 $s2
+    jal AfficherInt
     move $a0 $s3
     jal AfficherInt
     move $a0 $s4
@@ -542,8 +544,8 @@ TraiterImage:
 
     # TODO:
     # Initialisation boucle sur tous les pixels
-    move $t0 $s0           # Compteur lignes
-    move $t1 $s0           # Compteur colonnes
+    move $t0 $0           # Compteur lignes
+    move $t1 $0           # Compteur colonnes
     # Ne pas oublier de sauvegarder/charger les $ti à chaque
     # appel de fonction !
 
@@ -551,6 +553,7 @@ TraiterImage:
     TraiterImageBoucleLignes:
     beq $t0 $s3 TraiterImageBoucleLignesFin
 
+        move $t1 $0
         TraiterImageBoucleColonnes:
         beq $t1 $s4 TraiterImageBoucleColonnesFin
             # Si on est sur les bords, mettre à 0
@@ -564,10 +567,10 @@ TraiterImage:
                 # CalculG
                 # Sauvegarde resultat dans Dest
                 # Premier test, soyons fou fou
-                # mul $t2 $t0 $s3
-                # add $t2 $s6 $t2
-                # add $t2 $t2 $t1
-                # swr $0 0($t2)
+                mul $t2 $t0 $s3
+                add $t2 $s6 $t2
+                add $t2 $t2 $t1
+                sb $0 0($t2)
             j TraiterImageBoucleColonnesIncrementation
 
             # Mise à 0
@@ -575,7 +578,7 @@ TraiterImage:
             mul $t2 $t0 $s3
             add $t2 $s6 $t2
             add $t2 $t2 $t1
-            swr $0 0($t2)
+            sb $0 0($t2)
             j TraiterImageBoucleColonnesIncrementation
 
             # Incrémentation compteur colonnes, boucle sur les colonnes
