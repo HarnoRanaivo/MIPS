@@ -52,6 +52,11 @@
     move $a1 $v1
     jal TraiterImage
 
+    la $a0 DESTINA
+    move $a1 $v0
+    lwr $s2 2($a1)       # s2 : Taille totale du fichier
+    jal EcrireFichier
+
 Exit:
     li $v0 10
     syscall
@@ -518,8 +523,8 @@ TraiterImage:
     lwr $s3 18($a0)      # Largeur en pixels
     lwr $s4 22($a0)      # Hauteur en pixels
 
-    add $s5 $a1 $s0     # Adresse du premier pixel (Dest)
-    add $s6 $a0 $s0     # Adresse du premier pixel (Source)
+    add $s5 $a1 $s2     # Adresse du premier pixel (Dest)
+    add $s6 $a0 $s2     # Adresse du premier pixel (Source)
 
 #
     # Vérification lecture correcte de la taille
@@ -533,14 +538,59 @@ TraiterImage:
     li $a0 9            # Taille du buffer
     li $v0 9
     syscall
-    move $s4 $v0
+    move $s7 $v0
 
     # TODO:
-    # Boucle tous les pixels
-        # Copie Pixel + Voisinage
-        # CalculG
-        # Sauvegarde resultat dans Dest
-   
+    # Initialisation boucle sur tous les pixels
+    move $t0 $s0           # Compteur lignes
+    move $t1 $s0           # Compteur colonnes
+    # Ne pas oublier de sauvegarder/charger les $ti à chaque
+    # appel de fonction !
+
+    # Boucle sur tous les pixels restants
+    TraiterImageBoucleLignes:
+    beq $t0 $s3 TraiterImageBoucleLignesFin
+
+        TraiterImageBoucleColonnes:
+        beq $t1 $s4 TraiterImageBoucleColonnesFin
+            # Si on est sur les bords, mettre à 0
+            subi $t2 $s3 1
+            beq $t0 $0 TraiterImageBoucleColonnesZero
+            beq $t0 $t2 TraiterImageBoucleColonnesZero
+            subi $t2 $s4 1
+            beq $t1 $0 TraiterImageBoucleColonnesZero
+            beq $t1 $t2 TraiterImageBoucleColonnesZero
+                # Copie Pixel + Voisinage
+                # CalculG
+                # Sauvegarde resultat dans Dest
+                # Premier test, soyons fou fou
+                # mul $t2 $t0 $s3
+                # add $t2 $s6 $t2
+                # add $t2 $t2 $t1
+                # swr $0 0($t2)
+            j TraiterImageBoucleColonnesIncrementation
+
+            # Mise à 0
+            TraiterImageBoucleColonnesZero:
+            mul $t2 $t0 $s3
+            add $t2 $s6 $t2
+            add $t2 $t2 $t1
+            swr $0 0($t2)
+            j TraiterImageBoucleColonnesIncrementation
+
+            # Incrémentation compteur colonnes, boucle sur les colonnes
+            TraiterImageBoucleColonnesIncrementation:
+            addi $t1 $t1 1
+            j TraiterImageBoucleColonnes
+
+        TraiterImageBoucleColonnesFin:
+        # Incrémentation compteur lignes, boucle sur les lignes
+        addi $t0 $t0 1
+        j TraiterImageBoucleLignes
+    TraiterImageBoucleLignesFin:
+
+    move $v0 $a1
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
