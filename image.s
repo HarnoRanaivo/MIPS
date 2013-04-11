@@ -1,10 +1,30 @@
 .data
-    FICHIER:    .asciiz "lena.bmp"
-    DESTINA:    .asciiz "lena2.bmp"
+    FICHIER:    .asciiz "./lena.bmp"
+    DESTINA:    .asciiz "./lena2.bmp"
+    TEST:       .asciiz "test.txt"
+    TESTN:      .asciiz "test_copie.txt"
     ERROPEN:    .asciiz "Erreur lors de l'ouverture du fichier."
     ERRREAD:    .asciiz "Erreur lors de la lecture du fichier."
 
 .text
+
+    la $a0 TEST
+    li $a1 0
+    jal OuvrirFichier
+    move $s0 $v0
+
+    li $v0 9
+    li $a0 10
+    syscall
+
+    move $a0 $s0
+    move $a1 $v0
+    li $a2 10
+    jal LireFichier
+    
+    la $a0 TESTN
+    move $a2 $v0
+    jal EcrireFichier
 
 Exit:
     li $v0 10
@@ -154,7 +174,7 @@ LireImage:
     li $v0 16
     syscall
 
-    # Retour du buffer contenant la copie en mémoire du fichier
+    # Retour des buffers contenant les copies en mémoire du fichier
     move $v0 $s3
     move $v1 $s4
 
@@ -228,13 +248,13 @@ TraiterImage:
 ###############################################################################
 
 ###############################################################################
-# EcrireImage {{{
+# EcrireFichier {{{
 # Paramètres :
 # a0 : Chemin de destination
 # a1 : Buffer
 # a2 : Taille du fichier
 
-EcrireImage:
+EcrireFichier:
 # Prologue
     subiu $sp $sp 24
     sw $ra 0($sp)
