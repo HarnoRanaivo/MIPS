@@ -1,6 +1,6 @@
 .data
 
-demande: .asciiz "Rentrez une image à ouvrir\n"
+demande: .asciiz "Rentrez une chaine de caractère\n"
 perror: .asciiz "Erreur d'ouverture du fichier\n"
 perror2: .asciiz "Erreur de lecture de fichier\n"
 
@@ -9,9 +9,15 @@ perror2: .asciiz "Erreur de lecture de fichier\n"
 main:
 jal dem
 jal recup
+jal cherchePoint
+jal rajouteBMP
 jal chercheBSlashN
 jal affiche
-jal gereImage
+
+
+Exit:
+li $v0 10 #exit
+syscall
 
 dem:
 la $a0 demande
@@ -23,10 +29,93 @@ recup:
 li $a0 50 # $a0 = 50
 li $v0 9 # allocation de $a0 octets
 syscall
-li $a1 50
-move $a0 $v0
+li $a1 50 # maximum de caractère à lire
+move $a0 $v0 # $a0 = adresse allouée
 li $v0 8 # read string
 syscall
+jr $ra
+
+cherchePoint:
+#Prologue
+subiu $sp $sp 12
+sw $a1 8($sp)
+sw $a0 4($sp)
+sw $ra 0($sp)
+#Corps de la fonction
+li $t1 46 # valeur du .
+li $t2 67 # C
+li $t3 111 # o
+li $t4 110 # n
+li $t5 116 # t
+li $t6 111 # o
+li $t7 117 # u
+li $t8 114 # r
+li $t9 46 # .
+LoopCherchePoint:
+lb $t0 0($a0)
+beq $t0 $t1 RemplacePoint
+addiu $a0 $a0 1 # incrément $t0
+j LoopCherchePoint
+RemplacePoint:
+sb $t2 0($a0)
+addiu $a0 $a0 1
+sb $t3 0($a0)
+addiu $a0 $a0 1
+sb $t4 0($a0)
+addiu $a0 $a0 1
+sb $t5 0($a0)
+addiu $a0 $a0 1
+sb $t6 0($a0)
+addiu $a0 $a0 1
+sb $t7 0($a0)
+addiu $a0 $a0 1
+sb $t8 0($a0)
+addiu $a0 $a0 1
+sb $t9 0($a0)
+j FinLoopCherchePoint
+FinLoopCherchePoint:
+#Epilogue
+lb $t9 0($a0)
+move $v0 $t9
+lw $a1 8($sp)
+lw $a0 4($sp)
+lw $ra 0($sp)
+addiu $sp $sp 12
+jr $ra
+
+rajouteBMP:
+#Prologue
+subiu $sp $sp 12
+sw $a1 8($sp)
+sw $a0 4($sp)
+sw $ra 0($sp)
+#Corps de la fonction
+li $t1 46 # valeur du .
+li $t2 98 # b
+li $t3 109 # m
+li $t4 112 # p
+LoopCherchePointBIS:
+lb $t0 0($a0)
+beq $t0 $t1 ajoutBMP
+addiu $a0 $a0 1 # incrément $t0
+j LoopCherchePointBIS
+ajoutBMP:
+sb $t1 0($a0)
+addiu $a0 $a0 1
+sb $t2 0($a0)
+addiu $a0 $a0 1
+sb $t3 0($a0)
+addiu $a0 $a0 1
+sb $t4 0($a0)
+j FinLoopCherchePointBMP
+FinLoopCherchePointBMP:
+#Epilogue
+lb $t4 0($a0)
+move $v0 $t9
+lw $a1 8($sp)
+lw $a0 4($sp)
+lw $ra 0($sp)
+addiu $sp $sp 12
 jr $ra
 
 chercheBSlashN:
@@ -49,59 +138,15 @@ sb $t4 0($a0)
 j FinLoopCherche
 FinLoopCherche:
 #Epilogue
-lw $t0 0($a0)
+lb $t0 0($a0)
 move $v0 $t0
 lw $a1 8($sp)
 lw $a0 4($sp)
 lw $ra 0($sp)
-addi $sp $sp 12
+addiu $sp $sp 12
 jr $ra
 
 affiche:
-li $v0 4
-syscall
-j Exit
-
-gereImage:
-#ouverture
-li $v0 13
-li $a1 1 #ouvre pour lire
-li $a2 0 #mode est ingoré
-syscall
-bltz $v0 ouv #teste si le fichier est ouvert (existe)
-move $s6 $v0 #sauvegarde le descripteur de fichier
-#lecture
-li $a0 50 # 50 octets
-li $v0 9 # allocation
-syscall
-move $a1 $v0
-move $a0 $s6
-li $v0 15
-li $a2 49 # max de caractères à lire
-syscall
-bltz $v0 lect #teste si le fichier est ouvert (existe)
-#affichage
-move $a0 $a1
-li $v0 4
-syscall
-#fermeture
-li $v0 16 #close file
-move $a0 $s6 #file descriptor à fermer
-syscall
-j Exit
-
-Exit:
-li $v0 10 #exit
-syscall
-
-ouv: #erreur d'ouverture
-la $a0 perror
-li $v0 4
-syscall
-j Exit
-
-lect: #erreur de lecture
-la $a0 perror2
 li $v0 4
 syscall
 j Exit
