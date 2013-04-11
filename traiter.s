@@ -503,17 +503,18 @@ LireImage:
 
 TraiterImage:
 # Prologue
-    subiu $sp $sp 40
+    subiu $sp $sp 44
     sw $ra 0($sp)
     sw $a0 4($sp)
     sw $a1 8($sp)
-    sw $s0 12($sp)
-    sw $s1 16($sp)
-    sw $s2 20($sp)
-    sw $s3 24($sp)
-    sw $s4 28($sp)
-    sw $s6 32($sp)
-    sw $s7 36($sp)
+    sw $a2 12($sp)
+    sw $s0 16($sp)
+    sw $s1 20($sp)
+    sw $s2 24($sp)
+    sw $s3 28($sp)
+    sw $s4 32($sp)
+    sw $s6 36($sp)
+    sw $s7 40($sp)
 
 # Corps
     move $s0 $a0
@@ -523,39 +524,39 @@ TraiterImage:
     lwr $s3 18($a0)      # Largeur en pixels
     lwr $s4 22($a0)      # Hauteur en pixels
 
-    add $s5 $a0 $s2     # Adresse du premier pixel (Source)
-    add $s6 $a1 $s2     # Adresse du premier pixel (Dest)
+    add $s5 $a0 $s2      # Adresse du premier pixel (Source)
+    add $s6 $a1 $s2      # Adresse du premier pixel (Dest)
 
-#
+####
     # Vérification lecture correcte de la taille
-    move $a0 $s2
-    jal AfficherInt
-    move $a0 $s3
-    jal AfficherInt
-    move $a0 $s4
-    jal AfficherInt
-#
+    # move $a0 $s2
+    # jal AfficherInt
+    # move $a0 $s3
+    # jal AfficherInt
+    # move $a0 $s4
+    # jal AfficherInt
+####
 
     # Buffer matrice 3x3
     li $a0 9            # Taille du buffer
     li $v0 9
     syscall
-    move $s7 $v0
+    move $s7 $v0        # s7 : Adresse du buffer
 
     # TODO:
     # Initialisation boucle sur tous les pixels
-    move $t0 $0           # Compteur lignes
-    move $t1 $0           # Compteur colonnes
+    move $t0 $0           # t0 : Compteur lignes
+    move $t1 $0           # t1 : Compteur colonnes
     # Ne pas oublier de sauvegarder/charger les $ti à chaque
     # appel de fonction !
 
     # Boucle sur tous les pixels restants
     TraiterImageBoucleLignes:
     beq $t0 $s3 TraiterImageBoucleLignesFin
-
         move $t1 $0
         TraiterImageBoucleColonnes:
         beq $t1 $s4 TraiterImageBoucleColonnesFin
+
             # Si on est sur les bords, mettre à 0
             subi $t2 $s3 1
             beq $t0 $0 TraiterImageBoucleColonnesZero
@@ -563,45 +564,57 @@ TraiterImage:
             subi $t2 $s4 1
             beq $t1 $0 TraiterImageBoucleColonnesZero
             beq $t1 $t2 TraiterImageBoucleColonnesZero
-                # Copie Pixel + Voisinage
-                # CalculG
-                # Sauvegarde resultat dans Dest
+            # Si on est pas sur les bords :
+####
                 # Premier test, soyons fou fou
-                #mul $t2 $t0 $s3
-                #add $t2 $s6 $t2
-                #add $t2 $t2 $t1
-                #sb $0 0($t2)
-                #
+                # mul $t2 $t0 $s3         # t2 : t0 * s3
+                # add $t2 $s6 $t2         # t2 : t2 + t6
+                # add $t2 $t2 $t1         # t2 : t2 + t1
+                # sb $0 0($t2)
+####
+                # Sauvegarde des $ti importants avant appel de fonction
                 subiu $sp $sp 8
                 sw $t0 0($sp)
                 sw $t1 4($sp)
 
-                move $a0 $s5
-                move $a1 $s7
-                move $a2 $t0
-                move $a3 $t1
+                subi $t3 $t0 1
+                subi $t4 $t1 1
+                mul $t2 $t3 $s3
+                add $t2 $s5 $t2
+                add $t2 $t2 $t4
+                move $a0 $t2            # Adresse du coin gauche de la matrice 3x3
+                move $a1 $s7            # Buffer 3x3
+                move $a2 $s3            # Nombre de colonnes
                 jal CopieVoisinage
 
                 move $a0 $v0
                 jal CalculG
 
+                ## Restauration des $ti précédemment sauvegardés
                 lw $t0 0($sp)
                 lw $t1 4($sp)
                 addiu $sp $sp 8
 
-                mul $t2 $t0 $s3
-                add $t2 $s6 $t2
-                add $t2 $t2 $t1
-                sb $0 0($t2)
+                # Adresse du pixel =
+                # ligne courante * nombre de colonnes + colonne courante
+                # t2 = t0 * s3 + t1
+                mul $t2 $t0 $s3         # t2 : t0 * s3
+                add $t2 $s6 $t2         # t2 : t2 + t6
+                add $t2 $t2 $t1         # t2 : t2 + t1
+                sb $v0 0($t2)           # Copie résultat CalculG
+####
+                #li $t7 128
+                #sb $t7 0($t2)
+####
 
             j TraiterImageBoucleColonnesIncrementation
 
             # Mise à 0
             TraiterImageBoucleColonnesZero:
-            mul $t2 $t0 $s3
-            add $t2 $s6 $t2
-            add $t2 $t2 $t1
-            sb $0 0($t2)
+                mul $t2 $t0 $s3             # t2 : t0 * s3
+                add $t2 $s6 $t2             # t2 : t2 + t6
+                add $t2 $t2 $t1             # t2 : t2 + t1
+                sb $0 0($t2)
             j TraiterImageBoucleColonnesIncrementation
 
             # Incrémentation compteur colonnes, boucle sur les colonnes
@@ -615,20 +628,21 @@ TraiterImage:
         j TraiterImageBoucleLignes
     TraiterImageBoucleLignesFin:
 
-    move $v0 $a1
+    move $v0 $s1
 
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
     lw $a1 8($sp)
-    lw $s0 12($sp)
-    lw $s1 16($sp)
-    lw $s2 20($sp)
-    lw $s3 24($sp)
-    lw $s4 28($sp)
-    lw $s6 32($sp)
-    lw $s7 36($sp)
-    addiu $sp $sp 40
+    lw $a2 12($sp)
+    lw $s0 16($sp)
+    lw $s1 20($sp)
+    lw $s2 24($sp)
+    lw $s3 28($sp)
+    lw $s4 32($sp)
+    lw $s6 36($sp)
+    lw $s7 40($sp)
+    addiu $sp $sp 44
     jr $ra
 #}}}
 ###############################################################################
@@ -636,46 +650,51 @@ TraiterImage:
 ###############################################################################
 # CopieVoisinage {{{
 # Paramètres :
-# a0 : Pixels
+# a0 : Adresse coin gauche
 # a1 : Buffer 3x3
-# a2 : Ligne
-# a3 : Colonne
+# a2 : Nombre de colonnes de l'image
 #
 # Retour :
 # v0 : Buffer
 
 CopieVoisinage:
 # Prologue
-    subiu $sp $sp 24
+    subiu $sp $sp 48
     sw $ra 0($sp)
     sw $a0 4($sp)
     sw $a1 8($sp)
     sw $a2 12($sp)
     sw $a3 16($sp)
     sw $s0 20($sp)
+    sw $s1 24($sp)
+    sw $s2 28($sp)
+    sw $s3 32($sp)
+    sw $s4 36($sp)
+    sw $s5 40($sp)
+    sw $s6 44($sp)
 
 # Corps
-    li $t0 2 # Limite
-    li $t1 0
-    li $t2 -1
+    li $s0 3            # Limite
+    li $s1 0            # s1 : Compteur lignes
+    li $s2 0            # s2 : Compteur colonnes
+    move $s3 $a1        # Adresse buffer
     CopieVoisinageBoucleLignes:
-    beq $t2 $t0 CopieVoisinageFinBoucleLignes
-        li $t3 -1
+    beq $s1 $s0 CopieVoisinageFinBoucleLignes
+        li $s2 0
         CopieVoisinageBoucleColonnes:
-        beq $t3 $t0 CopieVoisinageFinBoucleColonnes
-            add $t4 $a2 $t2
-            add $t5 $a3 $t3
-            mul $t4 $t4 $a3
-            add $t4 $a0 $t4
-            add $t4 $t4 $t5
-            add $t6 $t1 $a1
-            sb $t4 0($t6)
+        beq $s2 $s0 CopieVoisinageFinBoucleColonnes
+            # Adresse du pixel =
+            # adresse coin + ligne courante * colonnes + colonne courante 
+            mul $s4 $s1 $a2
+            add $s4 $s4 $s2
+            add $s4 $a0 $s4
+            sb $s4 0($s3)
 
-            addi $t1 $t1 1
-            addi $t3 $t3 1
+            addi $s2 $s2 1
+            addi $s3 $s3 4      # buffer++
             j CopieVoisinageBoucleColonnes
         CopieVoisinageFinBoucleColonnes:
-        addi $t2 $t2 1
+        addi $s1 $s1 1
         j CopieVoisinageBoucleLignes
     CopieVoisinageFinBoucleLignes:
     move $v0 $a1
@@ -684,9 +703,15 @@ CopieVoisinage:
     lw $a0 4($sp)
     lw $a1 8($sp)
     lw $a2 12($sp)
-    lw $s0 16($sp)
-    lw $s1 20($sp)
-    addiu $sp $sp 24
+    lw $a3 16($sp)
+    lw $s0 20($sp)
+    lw $s1 24($sp)
+    lw $s2 28($sp)
+    lw $s3 32($sp)
+    lw $s4 36($sp)
+    lw $s5 40($sp)
+    lw $s6 44($sp)
+    addiu $sp $sp 48
     jr $ra
 #}}}
 ###############################################################################
@@ -808,4 +833,4 @@ Erreur:
 #}}}
 ###############################################################################
 
-# vim:ft=asm:fdm=marker:ff=unix:foldopen=all:foldclose=all 
+# vim:ft=asm:fdm=marker:ff=unix:foldopen=all:foldclose=all:colorcolumn=72,80
