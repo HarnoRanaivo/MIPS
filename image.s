@@ -156,10 +156,11 @@ LireImage:
     jal LireFichier
 
     lwr $s2 2($s1)       # s2 : Taille totale du fichier
-
-    # Affichage taille
-    move $a0 $s2
-    jal AfficherInt
+#
+#    # Affichage taille
+#    move $a0 $s2
+#    jal AfficherInt
+#
 
     # Allocation de la mémoire pour l'image sur le tas
     move $a0 $s2        # Taille du buffer
@@ -173,11 +174,36 @@ LireImage:
     syscall
     move $s4 $v0        # s4 : Buffer pour l'image
 
+    # La lecture n'a pas l'air de fonctionner comme on le souhaite si
+    # on tente de lire un fichier qu'on a déjà lu précédemment.
+
+    # Fermeture du fichier
+    move $a0 $s0        # Descripteur du fichier
+    li $v0 16
+    syscall
+
+    # Réouverture du fichier
+    move $a0 $s5
+    li $a1 0            # Ouverture en lecture
+    jal OuvrirFichier
+    move $s0 $v0        # s0 : Descripteur du fichier
+
     # Lecture de l'image entière
     move $a0 $s0        # Descripteur du fichier
     move $a1 $s3        # Adresse du buffer
     move $a2 $s2        # Taille du fichier
     jal LireFichier
+
+    # Fermeture du fichier
+    move $a0 $s0        # Descripteur du fichier
+    li $v0 16
+    syscall
+
+    # Réouverture du fichier
+    move $a0 $s5
+    li $a1 0            # Ouverture en lecture
+    jal OuvrirFichier
+    move $s0 $v0        # s0 : Descripteur du fichier
 
     # Lecture de l'image entière
     move $a0 $s0        # Descripteur du fichier
