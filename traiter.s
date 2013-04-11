@@ -1,11 +1,11 @@
 .data
-    SEUIL:       .word   10                                     # Seuil
+    SEUIL:       .word   100                                    # Seuil
     FTAILLE:     .word   3                                      # Taille des matrices carrées Fx et Fy
     FX:          .word   1, 0, -1, 2, 0, -2, 1, 0, -1           # Fx utilisée dans la convolution de matrices
     FY:          .word   1, 2, 1, 0, 0, 0, -1, -2, -1           # Fy utilisée dans la convolution de matrices
     A:           .word   128, 3, 210, 5, 30, 78, 255, 0, 153
 
-    FICHIER:    .asciiz "lena32.bmp"
+    FICHIER:    .asciiz "lena256.bmp"
     DESTINA:    .asciiz "lena2.bmp"
     TEST:       .asciiz "test.txt"
     TESTN:      .asciiz "test_copie.txt"
@@ -688,6 +688,7 @@ CopieVoisinage:
             mul $s4 $s1 $a2
             add $s4 $s4 $s2
             add $s4 $a0 $s4
+            lb $s4 0($s4)
             sb $s4 0($s3)
 
             addi $s2 $s2 1
