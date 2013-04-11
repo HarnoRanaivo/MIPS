@@ -54,6 +54,7 @@
 
     la $a0 DESTINA
     move $a1 $v0
+    lwl $s2 5($a1) ##
     lwr $s2 2($a1)       # s2 : Taille totale du fichier
     jal EcrireFichier
 
