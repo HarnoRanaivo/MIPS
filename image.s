@@ -138,87 +138,87 @@ LireImage:
     sw $s5 24($sp)
 
 # Corps
-    move $s5 $a0
+    move $s0 $a0
     li $a1 0            # Ouverture en lecture
     jal OuvrirFichier
-    move $s0 $v0        # s0 : Descripteur du fichier
+    move $s1 $v0        # s1 : Descripteur du fichier
 
     # Allocation de 14 octets sur le tas
     li $a0 14           # Taille du buffer
     li $v0 9
     syscall
-    move $s1 $v0        # s1 : Buffer pour l'entête du fichier
+    move $s2 $v0        # s2 : Buffer pour l'entête du fichier
 
     # Lecture de l'entête du fichier
-    move $a0 $s0        # Descripteur du fichier
-    move $a1 $s1        # Adresse du buffer
+    move $a0 $s1        # Descripteur du fichier
+    move $a1 $s2        # Adresse du buffer
     li $a2 14           # Nombre d'octets à lire
     jal LireFichier
 
-    lwr $s2 2($s1)       # s2 : Taille totale du fichier
+    lwr $s3 2($s2)       # s3 : Taille totale du fichier
 #
 #    # Affichage taille
-#    move $a0 $s2
+#    move $a0 $s3
 #    jal AfficherInt
 #
 
     # Allocation de la mémoire pour l'image sur le tas
-    move $a0 $s2        # Taille du buffer
-    li $v0 9
-    syscall
-    move $s3 $v0        # s3 : Buffer pour l'image
-
-    # Allocation de la mémoire pour l'image sur le tas
-    move $a0 $s2        # Taille du buffer
+    move $a0 $s3        # Taille du buffer
     li $v0 9
     syscall
     move $s4 $v0        # s4 : Buffer pour l'image
+
+    # Allocation de la mémoire pour l'image sur le tas
+    move $a0 $s3        # Taille du buffer
+    li $v0 9
+    syscall
+    move $s5 $v0        # s5 : Buffer pour l'image
 
     # La lecture n'a pas l'air de fonctionner comme on le souhaite si
     # on tente de lire un fichier qu'on a déjà lu précédemment.
 
     # Fermeture du fichier
-    move $a0 $s0        # Descripteur du fichier
+    move $a0 $s1        # Descripteur du fichier
     li $v0 16
     syscall
 
     # Réouverture du fichier
-    move $a0 $s5
+    move $a0 $s0
     li $a1 0            # Ouverture en lecture
     jal OuvrirFichier
-    move $s0 $v0        # s0 : Descripteur du fichier
+    move $s1 $v0        # s1 : Descripteur du fichier
 
     # Lecture de l'image entière
-    move $a0 $s0        # Descripteur du fichier
-    move $a1 $s3        # Adresse du buffer
-    move $a2 $s2        # Taille du fichier
-    jal LireFichier
-
-    # Fermeture du fichier
-    move $a0 $s0        # Descripteur du fichier
-    li $v0 16
-    syscall
-
-    # Réouverture du fichier
-    move $a0 $s5
-    li $a1 0            # Ouverture en lecture
-    jal OuvrirFichier
-    move $s0 $v0        # s0 : Descripteur du fichier
-
-    # Lecture de l'image entière
-    move $a0 $s0        # Descripteur du fichier
+    move $a0 $s1        # Descripteur du fichier
     move $a1 $s4        # Adresse du buffer
-    move $a2 $s2        # Taille du fichier
+    move $a2 $s3        # Taille du fichier
     jal LireFichier
 
     # Fermeture du fichier
-    move $a0 $s0        # Descripteur du fichier
+    move $a0 $s1        # Descripteur du fichier
+    li $v0 16
+    syscall
+
+    # Réouverture du fichier
+    move $a0 $s0
+    li $a1 0            # Ouverture en lecture
+    jal OuvrirFichier
+    move $s1 $v0        # s1 : Descripteur du fichier
+
+    # Lecture de l'image entière
+    move $a0 $s1        # Descripteur du fichier
+    move $a1 $s5        # Adresse du buffer
+    move $a2 $s3        # Taille du fichier
+    jal LireFichier
+
+    # Fermeture du fichier
+    move $a0 $s1        # Descripteur du fichier
     li $v0 16
     syscall
 
     # Retour des buffers contenant les copies en mémoire du fichier
-    move $v0 $s3
-    move $v1 $s4
+    move $v0 $s4
+    move $v1 $s5
 
     LireImageEpilogue:
 # Epilogue
