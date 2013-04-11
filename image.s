@@ -1,6 +1,6 @@
 .data
-    FICHIER:    .asciiz "./lena.bmp"
-    DESTINA:    .asciiz "./lena2.bmp"
+    FICHIER:    .asciiz "lena32.bmp"
+    DESTINA:    .asciiz "lena2.bmp"
     TEST:       .asciiz "test.txt"
     TESTN:      .asciiz "test_copie.txt"
     ERROPEN:    .asciiz "Erreur lors de l'ouverture du fichier."
@@ -8,22 +8,32 @@
 
 .text
 
-    la $a0 TEST
+# Test.txt
+#    la $a0 TEST
+#    li $a1 0
+#    jal OuvrirFichier
+#    move $s0 $v0
+#
+#    li $v0 9
+#    li $a0 10
+#    syscall
+#
+#    move $a0 $s0
+#    move $a1 $v0
+#    li $a2 10
+#    jal LireFichier
+#    
+#    la $a0 TESTN
+#    move $a2 $v0
+#    jal EcrireFichier
+
+    la $a0 FICHIER
     li $a1 0
-    jal OuvrirFichier
-    move $s0 $v0
+    jal LireImage
 
-    li $v0 9
-    li $a0 10
-    syscall
-
-    move $a0 $s0
+    la $a0 DESTINA
     move $a1 $v0
-    li $a2 10
-    jal LireFichier
-    
-    la $a0 TESTN
-    move $a2 $v0
+    lwr $s2 2($a1)       # s2 : Taille totale du fichier
     jal EcrireFichier
 
 Exit:
@@ -117,7 +127,7 @@ LireFichier:
 
 LireImage:
 # Prologue
-    subiu $sp $sp 24
+    subiu $sp $sp 28
     sw $ra 0($sp)
     sw $a0 4($sp)
     sw $s0 8($sp)
@@ -125,8 +135,10 @@ LireImage:
     sw $s2 12($sp)
     sw $s3 16($sp)
     sw $s4 20($sp)
+    sw $s5 24($sp)
 
 # Corps
+    move $s5 $a0
     li $a1 0            # Ouverture en lecture
     jal OuvrirFichier
     move $s0 $v0        # s0 : Descripteur du fichier
@@ -143,7 +155,11 @@ LireImage:
     li $a2 14           # Nombre d'octets à lire
     jal LireFichier
 
-    lw $s2 2($s1)       # s2 : Taille totale du fichier
+    lwr $s2 2($s1)       # s2 : Taille totale du fichier
+
+    # Affichage taille
+    move $a0 $s2
+    jal AfficherInt
 
     # Allocation de la mémoire pour l'image sur le tas
     move $a0 $s2        # Taille du buffer
@@ -187,7 +203,8 @@ LireImage:
     lw $s2 12($sp)
     lw $s3 16($sp)
     lw $s4 20($sp)
-    addiu $sp $sp 24
+    lw $s5 24($sp)
+    addiu $sp $sp 28
     jr $ra
 #}}}
 ###############################################################################
