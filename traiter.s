@@ -412,11 +412,12 @@ LireImage:
     li $a2 14           # Nombre d'octets à lire
     jal LireFichier
 
+    lwl $s3 5($s2)
     lwr $s3 2($s2)       # s3 : Taille totale du fichier
 #
-#    # Affichage taille
-#    move $a0 $s3
-#    jal AfficherInt
+    # Affichage taille
+    move $a0 $s3
+    jal AfficherInt
 #
 
     # Allocation de la mémoire pour l'image sur le tas
