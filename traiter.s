@@ -194,8 +194,8 @@ Convolution:
     beq $t0 $a0 EndLoopConvolution
         addu $t1 $a1 $t3    # Adresse de A[$t0]
         addu $t2 $a2 $t3    # Adresse de F[$t0]
-        lw $t5 0($t1)       # Chargement de A[$t0]
-        lw $t6 0($t2)       # Chargement de F[$t0]
+        lb $t5 0($t1)       # Chargement de A[$t0]
+        lb $t6 0($t2)       # Chargement de F[$t0]
         mul $t5 $t5 $t6     # A[$t0] * F[$t0]
         add $t4 $t4 $t5     # $t4 += A[$t0] * F[$t0]
         addi $t0 $t0 1      # Incrémentation du compteur
@@ -567,10 +567,33 @@ TraiterImage:
                 # CalculG
                 # Sauvegarde resultat dans Dest
                 # Premier test, soyons fou fou
+                #mul $t2 $t0 $s3
+                #add $t2 $s6 $t2
+                #add $t2 $t2 $t1
+                #sb $0 0($t2)
+                #
+                subiu $sp $sp 8
+                sw $t0 0($sp)
+                sw $t1 4($sp)
+
+                move $a0 $s5
+                move $a1 $s7
+                move $a2 $t0
+                move $a3 $t1
+                jal CopieVoisinage
+
+                move $a0 $v0
+                jal CalculG
+
+                lw $t0 0($sp)
+                lw $t1 4($sp)
+                addiu $sp $sp 8
+
                 mul $t2 $t0 $s3
                 add $t2 $s6 $t2
                 add $t2 $t2 $t1
                 sb $0 0($t2)
+
             j TraiterImageBoucleColonnesIncrementation
 
             # Mise à 0
@@ -606,6 +629,64 @@ TraiterImage:
     lw $s6 32($sp)
     lw $s7 36($sp)
     addiu $sp $sp 40
+    jr $ra
+#}}}
+###############################################################################
+
+###############################################################################
+# CopieVoisinage {{{
+# Paramètres :
+# a0 : Pixels
+# a1 : Buffer 3x3
+# a2 : Ligne
+# a3 : Colonne
+#
+# Retour :
+# v0 : Buffer
+
+CopieVoisinage:
+# Prologue
+    subiu $sp $sp 24
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+    sw $a1 8($sp)
+    sw $a2 12($sp)
+    sw $a3 16($sp)
+    sw $s0 20($sp)
+
+# Corps
+    li $t0 2 # Limite
+    li $t1 0
+    li $t2 -1
+    CopieVoisinageBoucleLignes:
+    beq $t2 $t0 CopieVoisinageFinBoucleLignes
+        li $t3 -1
+        CopieVoisinageBoucleColonnes:
+        beq $t3 $t0 CopieVoisinageFinBoucleColonnes
+            add $t4 $a2 $t2
+            add $t5 $a3 $t3
+            mul $t4 $t4 $a3
+            add $t4 $a0 $t4
+            add $t4 $t4 $t5
+            add $t6 $t1 $a1
+            sb $t4 0($t6)
+
+            addi $t1 $t1 1
+            addi $t3 $t3 1
+            j CopieVoisinageBoucleColonnes
+        CopieVoisinageFinBoucleColonnes:
+        addi $t2 $t2 1
+        j CopieVoisinageBoucleLignes
+    CopieVoisinageFinBoucleLignes:
+    move $v0 $a1
+# Epilogue
+    lw $ra 0($sp)
+    lw $a0 4($sp)
+    lw $a1 8($sp)
+    lw $a2 12($sp)
+    lw $s0 16($sp)
+    lw $s1 20($sp)
+    addiu $sp $sp 24
     jr $ra
 #}}}
 ###############################################################################
