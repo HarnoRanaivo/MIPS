@@ -1,3 +1,20 @@
+###############################################################################
+# MIPS : Maltraitons des Images Par Sobel
+#
+# Projet de l'UE « Architecture des Ordinateurs », L2S4, Université de
+# Strasbourg.
+# Implémentation du filtre de Sobel en assembleur MIPS.
+#
+# Auteurs :
+# MEYER Jérémy <jeremy.meyer@etu.unistra.fr>
+# RAZANAJATO Harenome <razanajato@etu.unistra.fr>
+#
+# Ce projet est libre. Vous pouvez le redistribuer ou le modifier selon les
+# termes de la license « Do What The Fuck You Want To Public License »,
+# Version 2, comme publiée par Sam Hocevar. Pour de plus amples informations,
+# veuillez vous référer au fichier COPYING, ou bien http://www.wtfpl.net/
+###############################################################################
+
 # Section .data {{{
 .data
     BUFFER:      .word   128                           # Taille des buffers
@@ -1022,9 +1039,10 @@ RajouteBMP:
 #}}}
 
 # Config spéciale pour vim {{{
-# vim:ft=asm:fdm=marker:ff=unix:foldopen=all:foldclose=all:colorcolumn=72,80
 # * 'za' pour ouvrir/fermer tous les replis.
 # * `:set fdm=indent` ou `:set fdm=marker` pour changer le style de replis.
 # * `:set colorcolumn=""` pour cacher les colonnes limites.
+#
+# vim: ft=asm:fdm=marker:ff=unix:foldopen=all:foldclose=all:colorcolumn=72,80
 #}}}
 
