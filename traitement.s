@@ -20,18 +20,51 @@
     BUFFER:      .word   128                           # Taille des buffers
     SEUIL:       .word   254                           # Seuil.
     FTAILLE:     .word   3                             # Taille de Fx et Fy.
-    FX:          .byte   1, 0, -1, 2, 0, -2, 1, 0, -1  # Matrice Fx pour Sobel.
-    FY:          .byte   1, 2, 1, 0, 0, 0, -1, -2, -1  # Matrice Fy pour Sobel.
 
-    ERROPEN:    .asciiz "Erreur lors de l'ouverture du fichier.\n"
-    ERRREAD:    .asciiz "Erreur lors de la lecture du fichier.\n"
-    DEMANDE:    .asciiz "Veuillez entrer une chaîne de caractères :\n"
-    SERASAUV:   .asciiz "Le résultat sera sauvegardé dans le fichier :\n"
+    # Matrices pour le filtre de Sobel.
+    SX:          .byte   1, 0, -1, 2, 0, -2, 1, 0, -1
+    SY:          .byte   1, 2, 1, 0, 0, 0, -1, -2, -1
+    # Matrices pour le filtre de Prewitt.
+    PX:          .byte   -1, 0, 1, -1, 0, 1, -1, 0, 1
+    PY:          .byte   1, 1, 1, 0, 0, 0, -1, -1, -1
+    # Matrices pour le filtre de Roberts.
+    RX:          .byte   0, 0, 0, 0, 0, 1, 0, -1, 0
+    RY:          .byte   0, 0, 0, 0, -1, 0, 0, 0, 1
+    # Matrices pour le filtre de Kirsch.
+    KX:          .byte   -3, -3, 5, -3, 0, 5, -3, -3, 5
+    KY:          .byte   -3, -3, -3, -3, 0, -3, 5, 5, 5
+
+
+    ERROPEN:    .asciiz "\nErreur lors de l'ouverture du fichier.\n"
+    ERRREAD:    .asciiz "\nErreur lors de la lecture du fichier.\n"
+    ERRFILTR:   .asciiz "\nErreur : Entrez un nombre compris entre 0 et 3.\n"
+    DEMANDE:    .asciiz "\nVeuillez entrer le chemin du fichier à traiter :\n> "
+    SERASAUV:   .asciiz "\nLe résultat sera sauvegardé dans le fichier :\n"
+    QUELFILTR:  .asciiz "\nQuel filtre voulez-vous utiliser ?\n"
+    FIL0:       .asciiz "0 : Filtre de Sobel\n"
+    FIL1:       .asciiz "1 : Filtre de Prewitt\n"
+    FIL2:       .asciiz "2 : Filtre de Roberts\n"
+    FIL3:       .asciiz "3 : Filtre de Kirsch\n"
+    PROMPT:     .asciiz "> "
 #}}}
 
 # Section .text {{{
 .text
 Main:
+    # Demande du filtre à utiliser.
+    jal ChoixFiltre
+    move $s0 $v0
+
+    bltz $v0 ErreurFiltre
+        li $t0 4
+    bge $s0 $t0 ErreurFiltre
+        j Suite
+    ErreurFiltre:
+        la $a0 ERRFILTR
+        jal Erreur
+    j Suite
+
+    Suite:
     # Demande du chemin du fichier.
     la $a0 DEMANDE
     jal AfficherString
@@ -50,29 +83,30 @@ Main:
     jal LireImage
 
     # Sauvegarde de l'adresse du chemin du fichier.
-    move $s0 $a0            # s0 : Chemin du fichier.
+    move $s1 $a0            # s1 : Chemin du fichier.
 
     # Traitement de l'image.
     move $a0 $v0
     move $a1 $v1
+    move $a2 $s0
     jal TraiterImage
 
     # Sauvegarde du buffer de l'image.
-    move $s1 $v0            # s1 : Buffer de l'image.
+    move $s2 $v0            # s2 : Buffer de l'image.
 
     # Affichage du nouveau chemin.
     la $a0 SERASAUV
     jal AfficherString
 
     # Nom du nouveau chemin.
-    move $a0 $s0
+    move $a0 $s1
     jal CherchePoint
     move $a0 $v0
     jal RajouteBMP
     jal AfficherString
 
     # Écriture du nouveau fichier.
-    move $a1 $s1
+    move $a1 $s2
     lwl $a2 5($a1)       # a2 : Taille totale du fichier (partie gauche).
     lwr $a2 2($a1)       # a2 : Taille totale du fichier (partie droite).
     jal EcrireFichier
@@ -275,48 +309,6 @@ CalculGxy:
     lw $a0 4($sp)
     lw $a1 8($sp)
     addiu $sp $sp 12
-    jr $ra
-# }}}
-###############################################################################
-
-###############################################################################
-# FiltreSobel {{{
-# Paramètres :
-# a0 : Adresse du pixel et de ses pixels environnants
-#
-# Retour :
-# v0 : G(a0)
-
-FiltreSobel:
-# Prologue
-    subiu $sp $sp 8
-    sw $ra 0($sp)
-    sw $a0 4($sp)
-
-# Corps
-    # Calcul de Gx
-    la $a1 FX
-    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel de FiltreSobel
-    move $s0 $v0        # s0 : retour de CalculGxy(a0, FX)
-
-    # Calcul de Gy
-    la $a1 FY
-    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel de FiltreSobel
-
-    # Gx + Gy et nouveau seuillage
-    # Seuillage Inf non nécessaire :
-    # Gx > SEUIL ou Gx = 0, idem pour Gy.
-    # Donc Gx + Gy = 0 ou Gx + Gy > SEUIL
-    add $s0 $s0 $v0     # s0 : CalculGxy(a0, FX) + CalculGxy(a0, FY)
-    move $a0 $s0
-    jal Seuillage255
-
-    # v0 : Seuillage255(Gx + Gy)
-
-# Epilogue
-    lw $ra 0($sp)
-    lw $a0 4($sp)
-    addiu $sp $sp 8
     jr $ra
 # }}}
 ###############################################################################
@@ -526,6 +518,7 @@ LireImage:
 # Paramètres :
 # a0 : Source
 # a1 : Destination
+# a2 : Filtre à utiliser
 #
 # Retour :
 # v0 : Destination
@@ -546,7 +539,7 @@ TraiterImage:
     sw $s7 40($sp)
 
 # Corps
-    move $s0 $a0
+    move $s0 $a2
     move $s1 $a1
 
     lwr $s2 10($a0)      # Offset des pixels
@@ -604,7 +597,8 @@ TraiterImage:
                 jal CopieVoisinage
 
                 move $a0 $v0
-                jal FiltreSobel
+                move $a1 $s0
+                jal AppliquerFiltre
 
                 ## Restauration des $ti précédemment sauvegardés
                 lw $t0 0($sp)
@@ -1034,6 +1028,160 @@ RajouteBMP:
     addiu $sp $sp 16
     jr $ra
 #}}}
+###############################################################################
+
+###############################################################################
+# ChoixFiltre {{{
+# Paramètres :
+# Aucun
+#
+# Retour :
+# v0 : Numéro du filtre
+# Choix du filtre
+
+ChoixFiltre:
+# Prologue
+    subiu $sp $sp 8
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+
+# Corps
+    la $a0 QUELFILTR
+    jal AfficherString
+
+    la $a0 FIL0
+    jal AfficherString
+
+    la $a0 FIL1
+    jal AfficherString
+
+    la $a0 FIL2
+    jal AfficherString
+
+    la $a0 FIL3
+    jal AfficherString
+
+    la $a0 PROMPT
+    jal AfficherString
+
+    li $v0 5
+    syscall
+
+# Epilogue
+    lw $ra 0($sp)
+    lw $a0 4($sp)
+    addiu $sp $sp 8
+    jr $ra
+#}}}
+###############################################################################
+
+###############################################################################
+# AppliquerFiltre {{{
+# Paramètres
+# a0 : Adresse du pixel et de son voisinage
+# a1 : Numéro du filtre
+#
+# Retour :
+# v0 : pixel
+AppliquerFiltre:
+# Prologue
+    subiu $sp $sp 12
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+    sw $a1 8($sp)
+
+# Corps
+    li $t0 0
+    li $t1 1
+    li $t2 2
+    li $t3 3
+    beq $a1 $t0 AppliquerSobel
+    beq $a1 $t1 AppliquerPrewitt
+    beq $a1 $t2 AppliquerRoberts
+    beq $a1 $t3 AppliquerKirsch
+        j AppliquerFiltreFin
+        AppliquerSobel:
+            la $a1 SX
+            la $a2 SY
+            jal Filtre
+            j AppliquerFiltreFin
+        AppliquerPrewitt:
+            la $a1 PX
+            la $a2 PY
+            jal Filtre
+            j AppliquerFiltreFin
+        AppliquerRoberts:
+            la $a1 RX
+            la $a2 RY
+            jal Filtre
+            j AppliquerFiltreFin
+        AppliquerKirsch:
+            la $a1 KX
+            la $a2 KY
+            jal Filtre
+            j AppliquerFiltreFin
+
+    AppliquerFiltreFin:
+
+# Epilogue
+    lw $ra 0($sp)
+    lw $a0 4($sp)
+    lw $a1 8($sp)
+    addiu $sp $sp 12
+    jr $ra
+#}}}
+###############################################################################
+
+###############################################################################
+# Filtre{{{
+# Paramètres :
+# a0 : Adresse du pixel et de ses pixels environnants
+# a1 : Matrice 1
+# a2 : Matrice 2
+#
+# Retour :
+# v0 : G(a0)
+
+Filtre:
+# Prologue
+    subiu $sp $sp 20
+    sw $ra 0($sp)
+    sw $a0 4($sp)
+    sw $s0 8($sp)
+    sw $s1 12($sp)
+    sw $s2 16($sp)
+
+# Corps
+    move $s0 $a1
+    move $s1 $a2
+    # Calcul de Gx
+    move $a1 $s0
+    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel
+    move $s2 $v0        # s2 : retour de CalculGxy(a0, KX)
+
+    # Calcul de Gy
+    move $a1 $s1
+    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel
+
+    # Gx + Gy et nouveau seuillage
+    # Seuillage Inf non nécessaire :
+    # Gx > SEUIL ou Gx = 0, idem pour Gy.
+    # Donc Gx + Gy = 0 ou Gx + Gy > SEUIL
+    add $s2 $s2 $v0     # s2 : CalculGxy(a0, KX) + CalculGxy(a0, KY)
+    move $a0 $s2
+    jal Seuillage255
+
+    # v0 : Seuillage255(Gx + Gy)
+
+# Epilogue
+    lw $ra 0($sp)
+    lw $a0 4($sp)
+    lw $s0 8($sp)
+    lw $s1 12($sp)
+    lw $s2 16($sp)
+    addiu $sp $sp 20
+    jr $ra
+# }}}
 ###############################################################################
 
 #}}}
