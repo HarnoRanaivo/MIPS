@@ -1,11 +1,11 @@
 .data
-    SEUIL:       .word   100                                    # Seuil
+    SEUIL:       .word   225                                    # Seuil
     FTAILLE:     .word   3                                      # Taille des matrices carrées Fx et Fy
-    FX:          .word   1, 0, -1, 2, 0, -2, 1, 0, -1           # Fx utilisée dans la convolution de matrices
-    FY:          .word   1, 2, 1, 0, 0, 0, -1, -2, -1           # Fy utilisée dans la convolution de matrices
+    FX:          .byte   1, 0, -1, 2, 0, -2, 1, 0, -1           # Fx utilisée dans la convolution de matrices
+    FY:          .byte   1, 2, 1, 0, 0, 0, -1, -2, -1           # Fy utilisée dans la convolution de matrices
     A:           .word   128, 3, 210, 5, 30, 78, 255, 0, 153
 
-    FICHIER:    .asciiz "lena256.bmp"
+    FICHIER:    .asciiz "lena128.bmp"
     DESTINA:    .asciiz "lena2.bmp"
     TEST:       .asciiz "test.txt"
     TESTN:      .asciiz "test_copie.txt"
@@ -185,7 +185,7 @@ Convolution:
     move $t1 $a1        # Adresse de A
     move $t2 $a2        # Adresse de F
     li $t7 4
-    mul $t3 $t0 $t7     # Compteur en octets
+#    mul $t3 $t0 $t7     # Compteur en octets
     move $t4 $0         # V
     move $t5 $0
     move $t6 $0
@@ -193,14 +193,14 @@ Convolution:
 
     LoopConvolution:
     beq $t0 $a0 EndLoopConvolution
-        addu $t1 $a1 $t3    # Adresse de A[$t0]
-        addu $t2 $a2 $t3    # Adresse de F[$t0]
+        addu $t1 $a1 $t0    # Adresse de A[$t0]
+        addu $t2 $a2 $t0    # Adresse de F[$t0]
         lb $t5 0($t1)       # Chargement de A[$t0]
         lb $t6 0($t2)       # Chargement de F[$t0]
         mul $t5 $t5 $t6     # A[$t0] * F[$t0]
         add $t4 $t4 $t5     # $t4 += A[$t0] * F[$t0]
         addi $t0 $t0 1      # Incrémentation du compteur
-        mul $t3 $t0 $t7
+#        mul $t3 $t0 $t7
         j LoopConvolution
     EndLoopConvolution:
 
