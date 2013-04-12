@@ -1,50 +1,71 @@
+# Section .data {{{
 .data
-    SEUIL:       .word   254                             # Seuil.
-    FTAILLE:     .word   3                               # Taille des matrices carrées Fx et Fy.
-    FX:          .byte   1, 0, -1, 2, 0, -2, 1, 0, -1    # Fx utilisée dans la convolution de matrices.
-    FY:          .byte   1, 2, 1, 0, 0, 0, -1, -2, -1    # Fy utilisée dans la convolution de matrices.
+    BUFFER:      .word   128                           # Taille des buffers
+    SEUIL:       .word   254                           # Seuil.
+    FTAILLE:     .word   3                             # Taille de Fx et Fy.
+    FX:          .byte   1, 0, -1, 2, 0, -2, 1, 0, -1  # Matrice Fx pour Sobel.
+    FY:          .byte   1, 2, 1, 0, 0, 0, -1, -2, -1  # Matrice Fy pour Sobel.
 
     ERROPEN:    .asciiz "Erreur lors de l'ouverture du fichier.\n"
     ERRREAD:    .asciiz "Erreur lors de la lecture du fichier.\n"
     DEMANDE:    .asciiz "Veuillez entrer une chaîne de caractères :\n"
-    SERASAUV:   .asciiz "Le fichier sera sauvegardé dans le fichier : "
+    SERASAUV:   .asciiz "Le résultat sera sauvegardé dans le fichier :\n"
+#}}}
 
+# Section .text {{{
 .text
 Main:
     # Demande du chemin du fichier.
     la $a0 DEMANDE
     jal AfficherString
 
-    jal recup
-    jal chercheBSlashN
+    # Lecture du chemin du fichier.
+    lw $a0 BUFFER
+    jal Entree
 
+    # Traitement du chemin du fichier (suppression de '\n' superflus).
+    move $a0 $v0
+    jal ChercheBSlashN
+
+    # Lecture de l'image.
+    move $a0 $v0
     li $a1 0
     jal LireImage
 
     # Sauvegarde de l'adresse du chemin du fichier.
-    move $s0 $a0
+    move $s0 $a0            # s0 : Chemin du fichier.
 
+    # Traitement de l'image.
     move $a0 $v0
     move $a1 $v1
     jal TraiterImage
 
-    move $a0 $s0
-    move $s1 $v0
+    # Sauvegarde du buffer de l'image.
+    move $s1 $v0            # s1 : Buffer de l'image.
 
-    jal cherchePoint
-    jal rajouteBMP
+    # Affichage du nouveau chemin.
+    la $a0 SERASAUV
     jal AfficherString
 
-    move $v0 $s1
+    # Nom du nouveau chemin.
+    move $a0 $s0
+    jal CherchePoint
+    move $a0 $v0
+    jal RajouteBMP
+    jal AfficherString
 
-    move $a1 $v0
-    lwl $a2 5($a1)
-    lwr $a2 2($a1)       # a2 : Taille totale du fichier.
+    # Écriture du nouveau fichier.
+    move $a1 $s1
+    lwl $a2 5($a1)       # a2 : Taille totale du fichier (partie gauche).
+    lwr $a2 2($a1)       # a2 : Taille totale du fichier (partie droite).
     jal EcrireFichier
 
 Exit:
     li $v0 10
     syscall
+#}}}
+
+# Fonctions {{{
 
 ###############################################################################
 # Valeur Absolue {{{
@@ -69,6 +90,7 @@ ValeurAbsolue:
         j ValeurAbsolueEpilogue
 
     ValeurAbsolueEpilogue:
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -101,6 +123,7 @@ Seuillage255:
         j Seuillage255Epilogue
 
     Seuillage255Epilogue:
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -133,6 +156,7 @@ SeuillageInf:
         j SeuillageInfEpilogue
 
     SeuillageInfEpilogue:
+
     # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -183,6 +207,7 @@ Convolution:
         j LoopConvolution
     EndLoopConvolution:
     move $v0 $t4        # v0 : Résultat
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -308,6 +333,7 @@ OuvrirFichier:
         jal Erreur
 
     OuvrirFichierEpilogue:
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -347,6 +373,7 @@ LireFichier:
         jal Erreur
 
     LireFichierEpilogue:
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -462,6 +489,7 @@ LireImage:
     move $v1 $s5
 
     LireImageEpilogue:
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -544,7 +572,7 @@ TraiterImage:
                 sw $t1 4($sp)
 
                 # Calcul de l'adresse du coin gauche de la matrice 3x3
-                # (ligne courante - 1) * nombre de colonnes + (colonne courante - 1)
+                # (ligne - 1) * nombre colonnes + (colonne - 1)
                 # t3 = t0 - 1
                 # t4 = t1 - 1
                 # t2 = t3 * s3 + t4
@@ -553,9 +581,9 @@ TraiterImage:
                 mul $t2 $t3 $s3
                 add $t2 $s5 $t2
                 add $t2 $t2 $t4
-                move $a0 $t2            # Adresse du coin gauche de la matrice 3x3
-                move $a1 $s7            # Buffer 3x3
-                move $a2 $s3            # Nombre de colonnes
+                move $a0 $t2         # Adresse du coin gauche de la matrice 3x3
+                move $a1 $s7         # Buffer 3x3
+                move $a2 $s3         # Nombre de colonnes
                 jal CopieVoisinage
 
                 move $a0 $v0
@@ -596,6 +624,7 @@ TraiterImage:
 
     TraiterImageBoucleLignesFin:
     move $v0 $s1
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -666,6 +695,7 @@ CopieVoisinage:
         j CopieVoisinageBoucleLignes
     CopieVoisinageFinBoucleLignes:
     move $v0 $a1
+
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -801,126 +831,200 @@ Erreur:
 #}}}
 ###############################################################################
 
-recup:
-li $a0 50 # $a0 = 50
-li $v0 9 # allocation de $a0 octets
-syscall
-li $a1 50 # maximum de caractère à lire
-move $a0 $v0 # $a0 = adresse allouée
-li $v0 8 # read string
-syscall
-jr $ra
+###############################################################################
+# Entree {{{
+# Paramètres :
+# a0 : Taille buffer.
+#
+# Retour :
+# v0 : Buffer de la chaîne de caratères.
+Entree:
+# Prologue
+    subiu $sp $sp 8
+    sw $a0 4($sp)
+    sw $ra 0($sp)
 
-cherchePoint:
+# Corps
+    # Allocation de a0 octets.
+    li $v0 9
+    syscall
+
+    # Lecture d'une string de taille a0 au maximum.
+    move $a1 $a0    # a1 : Taille du buffer.
+    move $a0 $v0    # a0 : Adresse du buffer. 
+    li $v0 8        # read string
+    syscall
+    move $v0 $a0
+
+# Epilogue
+    lw $a0 4($sp)
+    lw $ra 0($sp)
+    addiu $sp $sp 8
+    jr $ra
+#}}}
+###############################################################################
+
+###############################################################################
+# ChercheBSlashN {{{
+# Paramètres :
+# a0 : Chaîne de caractères.
+#
+# Retour :
+# v0 : Chaîne de caractères.
+#
+# Supprime les '\n' en trop dans une chaîne de caractères.
+
+ChercheBSlashN:
+# Prologue
+    subiu $sp $sp 8
+    sw $a0 4($sp)
+    sw $ra 0($sp)
+
+# Corps de la fonction
+    move $t0 $a0
+    li $t1 10       # t1 : Valeur ASCII de '\n'
+    li $t2 0        # t2 : Valeur ASCII de '\0'
+    LoopCherche:
+        lb $t3 0($t0)
+        beqz $t3 FinLoopCherche # Teste si $t3 = '\0'
+        beq $t3 $t1 SupprimerChariot
+            addi $t0 $t0 1      # Incrément $t0
+            j LoopCherche
+        SupprimerChariot:
+            sb $t2 0($t0)
+            j FinLoopCherche
+    FinLoopCherche:
+    move $v0 $a0
+
+# Epilogue
+    lw $a0 4($sp)
+    lw $ra 0($sp)
+    addiu $sp $sp 8
+    jr $ra
+#}}}
+###############################################################################
+
+###############################################################################
+# CherchePoint {{{
+# Paramètre :
+# a0 : Chaîne de caractères.
+#
+# Retour :
+# v0 : Chaîne de caractères.
+#
+# Remplace le .bmp par ".Contour" dans la chaîne a0.
+CherchePoint:
 #Prologue
-subiu $sp $sp 12
-sw $a1 8($sp)
-sw $a0 4($sp)
-sw $ra 0($sp)
-#Corps de la fonction
-li $t1 46 # valeur du .
-li $t2 67 # C
-li $t3 111 # o
-li $t4 110 # n
-li $t5 116 # t
-li $t6 111 # o
-li $t7 117 # u
-li $t8 114 # r
-li $t9 46 # .
-LoopCherchePoint:
-lb $t0 0($a0)
-beq $t0 $t1 RemplacePoint
-addiu $a0 $a0 1 # incrément $t0
-j LoopCherchePoint
-RemplacePoint:
-sb $t2 0($a0)
-addiu $a0 $a0 1
-sb $t3 0($a0)
-addiu $a0 $a0 1
-sb $t4 0($a0)
-addiu $a0 $a0 1
-sb $t5 0($a0)
-addiu $a0 $a0 1
-sb $t6 0($a0)
-addiu $a0 $a0 1
-sb $t7 0($a0)
-addiu $a0 $a0 1
-sb $t8 0($a0)
-addiu $a0 $a0 1
-sb $t9 0($a0)
-j FinLoopCherchePoint
-FinLoopCherchePoint:
-#Epilogue
-lb $t9 0($a0)
-move $v0 $t9
-lw $a1 8($sp)
-lw $a0 4($sp)
-lw $ra 0($sp)
-addiu $sp $sp 12
-jr $ra
+    subiu $sp $sp 16
+    sw $s0 12($sp)
+    sw $a1 8($sp)
+    sw $a0 4($sp)
+    sw $ra 0($sp)
 
-rajouteBMP:
+#Corps de la fonction
+    move $s0 $a0    # s0 : Adresse de la chaîne.
+    li $t1 46       # t1 : Valeur ASCII de '.'
+    li $t2 67       # t2 : Valeur ASCII de 'C'
+    li $t3 111      # t3 : Valeur ASCII de 'o'
+    li $t4 110      # t4 : Valeur ASCII de 'n'
+    li $t5 116      # t5 : Valeur ASCII de 't'
+    li $t6 111      # t6 : Valeur ASCII de 'o'
+    li $t7 117      # t7 : Valeur ASCII de 'u'
+    li $t8 114      # t8 : Valeur ASCII de 'r'
+    li $t9 46       # t9 : Valeur ASCII de '.'
+    LoopCherchePoint:
+        lb $t0 0($s0)
+        beq $t0 $t1 RemplacePoint
+            addiu $s0 $s0 1     # Incrément $s0
+            j LoopCherchePoint
+        RemplacePoint:
+            sb $t2 0($s0)
+            addiu $s0 $s0 1
+            sb $t3 0($s0)
+            addiu $s0 $s0 1
+            sb $t4 0($s0)
+            addiu $s0 $s0 1
+            sb $t5 0($s0)
+            addiu $s0 $s0 1
+            sb $t6 0($s0)
+            addiu $s0 $s0 1
+            sb $t7 0($s0)
+            addiu $s0 $s0 1
+            sb $t8 0($s0)
+            addiu $s0 $s0 1
+            sb $t9 0($s0)
+            j FinLoopCherchePoint
+    FinLoopCherchePoint:
+    move $v0 $a0
+
+#Epilogue
+    #lb $t9 0($a0)
+    #move $v0 $t9
+    lw $s0 12($sp)
+    lw $a1 8($sp)
+    lw $a0 4($sp)
+    lw $ra 0($sp)
+    addiu $sp $sp 16
+    jr $ra
+#}}}
+###############################################################################
+
+###############################################################################
+# RajouteBMP {{{
+# Paramètre :
+# a0 : Chaîne de caractères.
+#
+# Retour :
+# v0 : Chaîne de caractères.
+#
+# Rajoute ".bmp" à la fin de la chaîne de caractères.
+RajouteBMP:
 #Prologue
-subiu $sp $sp 12
-sw $a1 8($sp)
-sw $a0 4($sp)
-sw $ra 0($sp)
+    subiu $sp $sp 16
+    sw $s0 12($sp)
+    sw $a1 8($sp)
+    sw $a0 4($sp)
+    sw $ra 0($sp)
+
 #Corps de la fonction
-li $t1 46 # valeur du .
-li $t2 98 # b
-li $t3 109 # m
-li $t4 112 # p
-LoopCherchePointBIS:
-lb $t0 0($a0)
-beq $t0 $t1 ajoutBMP
-addiu $a0 $a0 1 # incrément $t0
-j LoopCherchePointBIS
-ajoutBMP:
-sb $t1 0($a0)
-addiu $a0 $a0 1
-sb $t2 0($a0)
-addiu $a0 $a0 1
-sb $t3 0($a0)
-addiu $a0 $a0 1
-sb $t4 0($a0)
-j FinLoopCherchePointBMP
-FinLoopCherchePointBMP:
+    move $s0 $a0    # s0 : Adresse de la chaîne.
+    li $t1 46       # t1 : Valeur ASCII de '.'
+    li $t2 98       # t2 : Valeur ASCII de 'b'
+    li $t3 109      # t3 : Valeur ASCII de 'm'
+    li $t4 112      # t4 : Valeur ASCII de 'p'
+    LoopCherchePointBIS:
+        lb $t0 0($s0)
+        beq $t0 $t1 ajoutBMP
+            addiu $s0 $s0 1     # Incrément $s0
+            j LoopCherchePointBIS
+        ajoutBMP:
+            sb $t1 0($s0)
+            addiu $s0 $s0 1
+            sb $t2 0($s0)
+            addiu $s0 $s0 1
+            sb $t3 0($s0)
+            addiu $s0 $s0 1
+            sb $t4 0($s0)
+            j FinLoopCherchePointBMP
+    FinLoopCherchePointBMP:
+    move $v0 $a0
+
 #Epilogue
-lb $t4 0($a0)
-move $v0 $t9
-lw $a1 8($sp)
-lw $a0 4($sp)
-lw $ra 0($sp)
-addiu $sp $sp 12
-jr $ra
+    lw $s0 12($sp)
+    lw $a1 8($sp)
+    lw $a0 4($sp)
+    lw $ra 0($sp)
+    addiu $sp $sp 16
+    jr $ra
+#}}}
+###############################################################################
 
-chercheBSlashN:
-#Prologue
-subiu $sp $sp 12
-sw $a1 8($sp)
-sw $a0 4($sp)
-sw $ra 0($sp)
-#Corps de la fonction
-li $t1 10 # valeur de \n
-li $t4 0 # valeur de \0
-LoopCherche:
-lb $t0 0($a0)
-beqz $t0 FinLoopCherche # teste si $t3 = 10
-beq $t0 $t1 SupprimerChariot
-addi $a0 $a0 1 # incrément $t0
-j LoopCherche
-SupprimerChariot:
-sb $t4 0($a0)
-j FinLoopCherche
-FinLoopCherche:
-#Epilogue
-lb $t0 0($a0)
-move $v0 $t0
-lw $a1 8($sp)
-lw $a0 4($sp)
-lw $ra 0($sp)
-addiu $sp $sp 12
-jr $ra
+#}}}
 
-
+# Config spéciale pour vim {{{
 # vim:ft=asm:fdm=marker:ff=unix:foldopen=all:foldclose=all:colorcolumn=72,80
+# * 'za' pour ouvrir/fermer tous les replis.
+# * `:set fdm=indent` ou `:set fdm=marker` pour changer le style de replis.
+# * `:set colorcolumn=""` pour cacher les colonnes limites.
+#}}}
+
