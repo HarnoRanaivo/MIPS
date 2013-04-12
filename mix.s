@@ -1,61 +1,27 @@
 .data
-    SEUIL:       .word   254                                    # Seuil
-    FTAILLE:     .word   3                                      # Taille des matrices carrées Fx et Fy
-    FX:          .byte   1, 0, -1, 2, 0, -2, 1, 0, -1           # Fx utilisée dans la convolution de matrices
-    FY:          .byte   1, 2, 1, 0, 0, 0, -1, -2, -1           # Fy utilisée dans la convolution de matrices
-    A:           .word   128, 3, 210, 5, 30, 78, 255, 0, 153
+    SEUIL:       .word   254                             # Seuil.
+    FTAILLE:     .word   3                               # Taille des matrices carrées Fx et Fy.
+    FX:          .byte   1, 0, -1, 2, 0, -2, 1, 0, -1    # Fx utilisée dans la convolution de matrices.
+    FY:          .byte   1, 2, 1, 0, 0, 0, -1, -2, -1    # Fy utilisée dans la convolution de matrices.
 
-    FICHIER:    .asciiz "lena.bmp"
-    DESTINA:    .asciiz "lena2.bmp"
-    TEST:       .asciiz "test.txt"
-    TESTN:      .asciiz "test_copie.txt"
-    ERROPEN:    .asciiz "Erreur lors de l'ouverture du fichier."
-    ERRREAD:    .asciiz "Erreur lors de la lecture du fichier."
+    ERROPEN:    .asciiz "Erreur lors de l'ouverture du fichier.\n"
+    ERRREAD:    .asciiz "Erreur lors de la lecture du fichier.\n"
     DEMANDE:    .asciiz "Veuillez entrer une chaîne de caractères :\n"
-
+    SERASAUV:   .asciiz "Le fichier sera sauvegardé dans le fichier : "
 
 .text
-
-# Test.txt
-#    la $a0 TEST
-#    li $a1 0
-#    jal OuvrirFichier
-#    move $s0 $v0
-#
-#    li $v0 9
-#    li $a0 10
-#    syscall
-#
-#    move $a0 $s0
-#    move $a1 $v0
-#    li $a2 10
-#    jal LireFichier
-#    
-#    la $a0 TESTN
-#    move $a2 $v0
-#    jal EcrireFichier
-
-# Test LireImage
-#    la $a0 FICHIER
-#    li $a1 0
-#    jal LireImage
-#
-#    la $a0 DESTINA
-#    move $a1 $v0
-#    lwr $s2 2($a1)       # s2 : Taille totale du fichier
-#    jal EcrireFichier
-
-# Test TraiterImage
+Main:
+    # Demande du chemin du fichier.
     la $a0 DEMANDE
     jal AfficherString
 
     jal recup
     jal chercheBSlashN
 
-    #la $a0 FICHIER
     li $a1 0
     jal LireImage
 
+    # Sauvegarde de l'adresse du chemin du fichier.
     move $s0 $a0
 
     move $a0 $v0
@@ -63,18 +29,17 @@
     jal TraiterImage
 
     move $a0 $s0
-    move $s0 $v0
+    move $s1 $v0
 
     jal cherchePoint
     jal rajouteBMP
     jal AfficherString
 
-    move $v0 $s0
+    move $v0 $s1
 
-    #la $a0 DESTINA
     move $a1 $v0
-    lwl $a2 5($a1) ##
-    lwr $a2 2($a1)       # s2 : Taille totale du fichier
+    lwl $a2 5($a1)
+    lwr $a2 2($a1)       # a2 : Taille totale du fichier.
     jal EcrireFichier
 
 Exit:
@@ -84,10 +49,10 @@ Exit:
 ###############################################################################
 # Valeur Absolue {{{
 # Paramètres :
-# a0 : Entier dont on veut la valeur absolue
+# a0 : Entier dont on veut la valeur absolue.
 #
 # Retour:
-# v0 : Valeur absolue de a0
+# v0 : Valeur absolue de a0.
 
 ValeurAbsolue:
 # Prologue
@@ -109,7 +74,6 @@ ValeurAbsolue:
     lw $a0 4($sp)
     addiu $sp $sp 8
     jr $ra
-# Fin Valeur Absolue
 # }}}
 ###############################################################################
 
@@ -142,18 +106,17 @@ Seuillage255:
     lw $a0 4($sp)
     addiu $sp $sp 8
     jr $ra
-# Fin Seuillage255
 # }}}
 ###############################################################################
 
 ###############################################################################
 # SeuillageInf {{{
 # Paramètres :
-# a0 : Entier à seuiller
-# a1 : Seuil inférieur
+# a0 : Entier à seuiller.
+# a1 : Seuil inférieur.
 #
 # Retour :
-# v0 : a0 seuillé
+# v0 : a0 seuillé.
 SeuillageInf:
     # Prologue
     subiu $sp $sp 12
@@ -176,19 +139,18 @@ SeuillageInf:
     lw $a1 8($sp)
     addiu $sp $sp 12
     jr $ra
-# Fin SeuillageInf
 # }}}
 ###############################################################################
 
 ###############################################################################
 # Convolution {{{
 # Paramètres :
-# a0 : taille des matrices
-# a1 : matrice A
-# a2 : matrice Fx ou Fy
+# a0 : Taille des matrices.
+# a1 : Matrice A.
+# a2 : Matrice Fx ou Fy.
 #
 # Retour :
-# v0 : convolution de a1 par a2
+# v0 : convolution de a1 par a2.
 
 Convolution:
 # Prologue
@@ -200,15 +162,13 @@ Convolution:
 
 # Corps
     # Initialisations
-    move $t0 $0         # Compteur
-    move $t1 $a1        # Adresse de A
-    move $t2 $a2        # Adresse de F
-    li $t7 4
-#    mul $t3 $t0 $t7     # Compteur en octets
-    move $t4 $0         # V
-    move $t5 $0
-    move $t6 $0
-    mul $a0 $a0 $a0
+    move $t0 $0         # t0 : Compteur.
+    move $t1 $a1        # t1 : Adresse de A.
+    move $t2 $a2        # t2 : Adresse de F.
+    move $t4 $0         # t4 : Résultat.
+    move $t5 $0         # t5 : Sera utilisé pour A[$t0].
+    move $t6 $0         # t6 : Sera utilisé pour F[$t0].
+    mul $a0 $a0 $a0     # a0 : Taille²
 
     LoopConvolution:
     beq $t0 $a0 EndLoopConvolution
@@ -218,13 +178,11 @@ Convolution:
         lb $t6 0($t2)       # Chargement de F[$t0]
         mul $t5 $t5 $t6     # A[$t0] * F[$t0]
         add $t4 $t4 $t5     # $t4 += A[$t0] * F[$t0]
-        addi $t0 $t0 1      # Incrémentation du compteur
-#        mul $t3 $t0 $t7
+        # Incrémentation du compteur.
+        addi $t0 $t0 1
         j LoopConvolution
     EndLoopConvolution:
-
-    move $v0 $t4
-
+    move $v0 $t4        # v0 : Résultat
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -232,7 +190,6 @@ Convolution:
     lw $a2 12($sp)
     addiu $sp $sp 16
     jr $ra
-#Fin Convolution
 #}}}
 ###############################################################################
 
@@ -254,7 +211,7 @@ CalculGxy:
     sw $a1 8($sp)
 
 # Corps
-    move $a2 $a1
+    move $a2 $a1            # Attention, important : a2 <- a1 avant a1 <- a0.
     move $a1 $a0
     lw $a0 FTAILLE
     jal Convolution         # Convolution de a0 par Fx ou Fy
@@ -281,14 +238,14 @@ CalculGxy:
 ###############################################################################
 
 ###############################################################################
-# CalculG {{{
+# FiltreSobel {{{
 # Paramètres :
 # a0 : Adresse du pixel et de ses pixels environnants
 #
 # Retour :
 # v0 : G(a0)
 
-CalculG:
+FiltreSobel:
 # Prologue
     subiu $sp $sp 8
     sw $ra 0($sp)
@@ -297,17 +254,22 @@ CalculG:
 # Corps
     # Calcul de Gx
     la $a1 FX
-    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel de CalculG
-    move $s0 $v0        # v0 : retour de CalculGxy(a0, FX)
+    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel de FiltreSobel
+    move $s0 $v0        # s0 : retour de CalculGxy(a0, FX)
 
     # Calcul de Gy
     la $a1 FY
-    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel de CalculG
+    jal CalculGxy       # a0 n'a pas été modifié : a0 de l'appel de FiltreSobel
 
     # Gx + Gy et nouveau seuillage
-    add $s0 $s0 $v0     # CalculGxy(a0, FX) + CalculGxy(a0, FY)
+    # Seuillage Inf non nécessaire :
+    # Gx > SEUIL ou Gx = 0, idem pour Gy.
+    # Donc Gx + Gy = 0 ou Gx + Gy > SEUIL
+    add $s0 $s0 $v0     # s0 : CalculGxy(a0, FX) + CalculGxy(a0, FY)
     move $a0 $s0
     jal Seuillage255
+
+    # v0 : Seuillage255(Gx + Gy)
 
 # Epilogue
     lw $ra 0($sp)
@@ -334,10 +296,11 @@ OuvrirFichier:
     sw $a1 8($sp)
 
 # Corps
-    li $a2 0
+    li $a2 0        # 0 : Ignorer le mode
     li $v0 13
     syscall
 
+    # Erreur d'ouverture du fichier si v0 < 0.
     bltz $v0 OuvrirFichierErreur
         j OuvrirFichierEpilogue
     OuvrirFichierErreur:
@@ -376,6 +339,7 @@ LireFichier:
     li $v0 14
     syscall
 
+    # Erreur de lecture du fichier si v0 < 0.
     bltz $v0 LireFichierErreur
         j LireFichierEpilogue
     LireFichierErreur:
@@ -399,8 +363,12 @@ LireFichier:
 # a0 : Chemin vers l'image à ouvrir.
 #
 # Retour:
-# v0 : Adresse du buffer contenant l'image.
-# v1 : Adresse du buffer contenant l'image.
+# v0 : Adresse du 1er buffer contenant l'image.
+# v1 : Adresse du 2ème buffer contenant l'image.
+#
+# L'image est copiée deux fois en mémoire : le filtre nécessite l'image
+# d'origine pour le calcul de chaque pixel, on doit écrire ailleurs.
+# L'image est copiée dans sa totalité pour faciliter l'écriture.
 
 LireImage:
 # Prologue
@@ -434,19 +402,14 @@ LireImage:
 
     lwl $s3 5($s2)
     lwr $s3 2($s2)       # s3 : Taille totale du fichier
-#
-    # Affichage taille
-    move $a0 $s3
-    jal AfficherInt
-#
 
-    # Allocation de la mémoire pour l'image sur le tas
+    # 1ère Allocation de la mémoire pour l'image sur le tas
     move $a0 $s3        # Taille du buffer
     li $v0 9
     syscall
     move $s4 $v0        # s4 : Buffer pour l'image
 
-    # Allocation de la mémoire pour l'image sur le tas
+    # 2ème Allocation de la mémoire pour l'image sur le tas
     move $a0 $s3        # Taille du buffer
     li $v0 9
     syscall
@@ -466,7 +429,7 @@ LireImage:
     jal OuvrirFichier
     move $s1 $v0        # s1 : Descripteur du fichier
 
-    # Lecture de l'image entière
+    # 1ère Lecture de l'image entière
     move $a0 $s1        # Descripteur du fichier
     move $a1 $s4        # Adresse du buffer
     move $a2 $s3        # Taille du fichier
@@ -483,7 +446,7 @@ LireImage:
     jal OuvrirFichier
     move $s1 $v0        # s1 : Descripteur du fichier
 
-    # Lecture de l'image entière
+    # 2ème Lecture de l'image entière
     move $a0 $s1        # Descripteur du fichier
     move $a1 $s5        # Adresse du buffer
     move $a2 $s3        # Taille du fichier
@@ -548,27 +511,16 @@ TraiterImage:
     add $s5 $a0 $s2      # Adresse du premier pixel (Source)
     add $s6 $a1 $s2      # Adresse du premier pixel (Dest)
 
-####
-    # Vérification lecture correcte de la taille
-    # move $a0 $s2
-    # jal AfficherInt
-    # move $a0 $s3
-    # jal AfficherInt
-    # move $a0 $s4
-    # jal AfficherInt
-####
-
     # Buffer matrice 3x3
     li $a0 9            # Taille du buffer
     li $v0 9
     syscall
     move $s7 $v0        # s7 : Adresse du buffer
 
-    # TODO:
     # Initialisation boucle sur tous les pixels
     move $t0 $0           # t0 : Compteur lignes
     move $t1 $0           # t1 : Compteur colonnes
-    # Ne pas oublier de sauvegarder/charger les $ti à chaque
+    # Ne pas oublier de sauvegarder/charger ces deux $ti à chaque
     # appel de fonction !
 
     # Boucle sur tous les pixels restants
@@ -585,19 +537,17 @@ TraiterImage:
             subi $t2 $s4 1
             beq $t1 $0 TraiterImageBoucleColonnesZero
             beq $t1 $t2 TraiterImageBoucleColonnesZero
-            # Si on est pas sur les bords :
-####
-                # Premier test, soyons fou fou
-                # mul $t2 $t0 $s3         # t2 : t0 * s3
-                # add $t2 $s6 $t2         # t2 : t2 + t6
-                # add $t2 $t2 $t1         # t2 : t2 + t1
-                # sb $0 0($t2)
-####
+                # Si on est pas sur les bords :
                 # Sauvegarde des $ti importants avant appel de fonction
                 subiu $sp $sp 8
                 sw $t0 0($sp)
                 sw $t1 4($sp)
 
+                # Calcul de l'adresse du coin gauche de la matrice 3x3
+                # (ligne courante - 1) * nombre de colonnes + (colonne courante - 1)
+                # t3 = t0 - 1
+                # t4 = t1 - 1
+                # t2 = t3 * s3 + t4
                 subi $t3 $t0 1
                 subi $t4 $t1 1
                 mul $t2 $t3 $s3
@@ -609,7 +559,7 @@ TraiterImage:
                 jal CopieVoisinage
 
                 move $a0 $v0
-                jal CalculG
+                jal FiltreSobel
 
                 ## Restauration des $ti précédemment sauvegardés
                 lw $t0 0($sp)
@@ -622,13 +572,9 @@ TraiterImage:
                 mul $t2 $t0 $s3         # t2 : t0 * s3
                 add $t2 $s6 $t2         # t2 : t2 + t6
                 add $t2 $t2 $t1         # t2 : t2 + t1
-                sb $v0 0($t2)           # Copie résultat CalculG
-####
-                #li $t7 128
-                #sb $t7 0($t2)
-####
+                sb $v0 0($t2)           # Copie résultat FiltreSobel
 
-            j TraiterImageBoucleColonnesIncrementation
+                j TraiterImageBoucleColonnesIncrementation
 
             # Mise à 0
             TraiterImageBoucleColonnesZero:
@@ -636,7 +582,7 @@ TraiterImage:
                 add $t2 $s6 $t2             # t2 : t2 + t6
                 add $t2 $t2 $t1             # t2 : t2 + t1
                 sb $0 0($t2)
-            j TraiterImageBoucleColonnesIncrementation
+                j TraiterImageBoucleColonnesIncrementation
 
             # Incrémentation compteur colonnes, boucle sur les colonnes
             TraiterImageBoucleColonnesIncrementation:
@@ -647,10 +593,9 @@ TraiterImage:
         # Incrémentation compteur lignes, boucle sur les lignes
         addi $t0 $t0 1
         j TraiterImageBoucleLignes
+
     TraiterImageBoucleLignesFin:
-
     move $v0 $s1
-
 # Epilogue
     lw $ra 0($sp)
     lw $a0 4($sp)
@@ -696,9 +641,9 @@ CopieVoisinage:
 
 # Corps
     li $s0 3            # Limite
-    li $s1 0            # s1 : Compteur lignes
-    li $s2 0            # s2 : Compteur colonnes
-    move $s3 $a1        # Adresse buffer
+    li $s1 0            # s1 : Compteur lignes.
+    li $s2 0            # s2 : Compteur colonnes.
+    move $s3 $a1        # Adresse buffer.
     CopieVoisinageBoucleLignes:
     beq $s1 $s0 CopieVoisinageFinBoucleLignes
         li $s2 0
@@ -708,14 +653,15 @@ CopieVoisinage:
             # adresse coin + ligne courante * colonnes + colonne courante 
             mul $s4 $s1 $a2
             add $s4 $s4 $s2
-            add $s4 $a0 $s4
-            lb $s4 0($s4)
-            sb $s4 0($s3)
-
-            addi $s2 $s2 1
-            addi $s3 $s3 1      # buffer++
+            add $s4 $a0 $s4     # s4 : Adresse du pixel courant.
+            lb $s4 0($s4)       # s4 : Chargement du pixel.
+            sb $s4 0($s3)       # Sauvegarde du pixel dans le buffer.
+            # Incrémentations
+            addi $s3 $s3 1      # Adresse du pixel suivant dans le buffer.
+            addi $s2 $s2 1      # Incrémentation compteur colonnes.
             j CopieVoisinageBoucleColonnes
         CopieVoisinageFinBoucleColonnes:
+        # Incrémentation compteur lignes
         addi $s1 $s1 1
         j CopieVoisinageBoucleLignes
     CopieVoisinageFinBoucleLignes:
